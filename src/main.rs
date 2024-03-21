@@ -7,7 +7,18 @@ use warp::Filter;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), nvml::error::NvmlError> {
-    let matches = clap::command!().get_matches();
+    use std::net;
+
+    let matches = clap::command!()
+        .arg(
+            clap::arg!(listen: -l --listen <ADDR> "Address to listen on for connections")
+                .value_parser(clap::value_parser!(net::IpAddr)),
+        )
+        .arg(
+            clap::arg!(port: -p --port <PORT> "Port to listen on")
+                .value_parser(clap::value_parser!(u16)),
+        )
+        .get_matches();
 
     let nvml = Nvml::init().map(Arc::new)?;
 
@@ -23,7 +34,14 @@ async fn main() -> Result<(), nvml::error::NvmlError> {
     let v1_api = device_count;
     let v1_api = warp::any().and(warp::path("v1")).and(v1_api);
 
-    warp::serve(v1_api).run(([0, 0, 0, 0], 8080)).await;
+    let addr = matches
+        .get_one("listen")
+        .cloned()
+        .unwrap_or(net::Ipv6Addr::UNSPECIFIED.into());
+    let port = matches.get_one("port").cloned().unwrap_or(80);
+    warp::serve(v1_api)
+        .run(net::SocketAddr::new(addr, port))
+        .await;
     unreachable!()
 }
 
