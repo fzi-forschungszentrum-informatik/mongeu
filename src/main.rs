@@ -32,7 +32,46 @@ async fn main() -> Result<(), nvml::error::NvmlError> {
             move || nvml.device_count().replyify()
         });
 
-    let v1_api = device_count;
+    let device_name = warp::get()
+        .and(warp::path::param::<u32>())
+        .and(warp::path("name"))
+        .and(warp::path::end())
+        .and_then({
+            let nvml = nvml.clone();
+            move |i| with_device(nvml.as_ref(), i, |d| d.name())
+        });
+
+    let device_uuid = warp::get()
+        .and(warp::path::param::<u32>())
+        .and(warp::path("uuid"))
+        .and(warp::path::end())
+        .and_then({
+            let nvml = nvml.clone();
+            move |i| with_device(nvml.as_ref(), i, |d| d.uuid())
+        });
+
+    let device_serial = warp::get()
+        .and(warp::path::param::<u32>())
+        .and(warp::path("serial"))
+        .and(warp::path::end())
+        .and_then({
+            let nvml = nvml.clone();
+            move |i| with_device(nvml.as_ref(), i, |d| d.serial())
+        });
+
+    let device_power_usage = warp::get()
+        .and(warp::path::param::<u32>())
+        .and(warp::path("power_usage"))
+        .and(warp::path::end())
+        .and_then({
+            let nvml = nvml.clone();
+            move |i| with_device(nvml.as_ref(), i, |d| d.power_usage())
+        });
+
+    let device = device_name.or(device_uuid).or(device_serial).or(device_power_usage);
+    let device = warp::any().and(warp::path("device")).and(device);
+
+    let v1_api = device_count.or(device);
     let v1_api = warp::any().and(warp::path("v1")).and(v1_api);
 
     let addr = matches
