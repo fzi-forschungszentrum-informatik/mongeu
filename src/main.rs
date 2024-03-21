@@ -7,6 +7,8 @@ use warp::Filter;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), nvml::error::NvmlError> {
+    let matches = clap::command!().get_matches();
+
     let nvml = Nvml::init().map(Arc::new)?;
 
     // End-point exposing the number of devices on this machine
