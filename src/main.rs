@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use nvml_wrapper as nvml;
 
+use nvml::error::NvmlError;
 use nvml::Nvml;
 use warp::Filter;
 
@@ -43,6 +44,19 @@ async fn main() -> Result<(), nvml::error::NvmlError> {
         .run(net::SocketAddr::new(addr, port))
         .await;
     unreachable!()
+}
+
+/// Perform an operation with a device
+fn with_device<T: serde::Serialize>(
+    nvml: &nvml::Nvml,
+    index: u32,
+    func: impl Fn(nvml::Device) -> Result<T, NvmlError>,
+) -> impl std::future::Future<Output = Result<impl warp::Reply, warp::Rejection>> {
+    let res = match nvml.device_by_index(index) {
+        Err(NvmlError::InvalidArg) => Err(warp::reject::not_found()),
+        r => Ok(r.and_then(func).replyify()),
+    };
+    std::future::ready(res)
 }
 
 /// Convenience trait for transforming stuff into a [warp::Reply]
