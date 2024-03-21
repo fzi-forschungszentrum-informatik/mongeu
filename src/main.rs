@@ -68,7 +68,10 @@ async fn main() -> Result<(), nvml::error::NvmlError> {
             move |i| with_device(nvml.as_ref(), i, |d| d.power_usage())
         });
 
-    let device = device_name.or(device_uuid).or(device_serial).or(device_power_usage);
+    let device = device_name
+        .or(device_uuid)
+        .or(device_serial)
+        .or(device_power_usage);
     let device = warp::path("device").and(device);
 
     let v1_api = device_count.or(device);
