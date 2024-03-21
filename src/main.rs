@@ -69,10 +69,10 @@ async fn main() -> Result<(), nvml::error::NvmlError> {
         });
 
     let device = device_name.or(device_uuid).or(device_serial).or(device_power_usage);
-    let device = warp::any().and(warp::path("device")).and(device);
+    let device = warp::path("device").and(device);
 
     let v1_api = device_count.or(device);
-    let v1_api = warp::any().and(warp::path("v1")).and(v1_api);
+    let v1_api = warp::path("v1").and(v1_api);
 
     let addr = matches
         .get_one("listen")
