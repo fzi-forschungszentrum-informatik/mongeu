@@ -107,12 +107,21 @@ trait Replyify {
     fn replyify(self) -> impl warp::Reply;
 }
 
-impl<T: serde::Serialize, E: ToString> Replyify for Result<T, E> {
+impl<T: serde::Serialize, E: Replyify> Replyify for Result<T, E> {
+    fn replyify(self) -> impl warp::Reply {
+        self.map(|v| warp::reply::json(&v))
+            .map_err(Replyify::replyify)
+    }
+}
+
+impl Replyify for NvmlError {
     fn replyify(self) -> impl warp::Reply {
         use warp::http::StatusCode;
-
-        self.as_ref()
-            .map(warp::reply::json)
-            .map_err(|e| warp::reply::with_status(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR))
+        let status = match self {
+            NvmlError::InvalidArg => StatusCode::NOT_FOUND,
+            NvmlError::NotSupported => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        warp::reply::with_status(self.to_string(), status)
     }
 }
