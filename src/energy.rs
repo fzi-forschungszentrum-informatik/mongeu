@@ -1,6 +1,42 @@
 //! Energy consumption measurement and associated utilities
+use std::time::Instant;
+
 use anyhow::{Context, Result};
 use nvml_wrapper as nvml;
+
+/// A base measurement across multiple devices
+#[derive(Debug)]
+pub struct BaseMeasurement {
+    time: Instant,
+    devices: Vec<DeviceData>,
+}
+
+impl BaseMeasurement {
+    /// Create a new base measurement
+    pub fn new(nvml: &nvml::Nvml) -> anyhow::Result<Self> {
+        let device_count = nvml.device_count()?;
+
+        let time = Instant::now();
+        (0..device_count)
+            .map(|i| {
+                device_by_index(nvml, i)
+                    .and_then(DeviceData::new_total)
+                    .with_context(|| format!("Could not retrieve data for device {i}"))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(|d| Self { time, devices: d })
+    }
+
+    /// Create a new [Measurement] relative to this base
+    pub fn measurement(&self, nvml: &nvml::Nvml) -> anyhow::Result<Measurement> {
+        let time = Instant::now().duration_since(self.time).as_millis();
+        self.devices
+            .iter()
+            .map(|d| d.relative(nvml).context("Could not perform measurement"))
+            .collect::<Result<_, _>>()
+            .map(|d| Measurement { time, devices: d })
+    }
+}
 
 /// A measurement across multiple devices
 #[derive(Debug, serde::Serialize)]
