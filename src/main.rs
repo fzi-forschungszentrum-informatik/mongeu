@@ -8,6 +8,7 @@ use nvml::Nvml;
 use warp::reply::json;
 use warp::Filter;
 
+mod energy;
 mod replyify;
 
 use replyify::Replyify;
