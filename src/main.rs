@@ -6,6 +6,10 @@ use nvml::error::NvmlError;
 use nvml::Nvml;
 use warp::Filter;
 
+mod replyify;
+
+use replyify::Replyify;
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), nvml::error::NvmlError> {
     use std::net;
@@ -99,29 +103,4 @@ fn with_device<T: serde::Serialize>(
         r => Ok(r.and_then(func).replyify()),
     };
     std::future::ready(res)
-}
-
-/// Convenience trait for transforming stuff into a [warp::Reply]
-trait Replyify {
-    /// Transform this value into a [warp::Reply]
-    fn replyify(self) -> impl warp::Reply;
-}
-
-impl<T: serde::Serialize, E: Replyify> Replyify for Result<T, E> {
-    fn replyify(self) -> impl warp::Reply {
-        self.map(|v| warp::reply::json(&v))
-            .map_err(Replyify::replyify)
-    }
-}
-
-impl Replyify for NvmlError {
-    fn replyify(self) -> impl warp::Reply {
-        use warp::http::StatusCode;
-        let status = match self {
-            NvmlError::InvalidArg => StatusCode::NOT_FOUND,
-            NvmlError::NotSupported => StatusCode::NOT_FOUND,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-        warp::reply::with_status(self.to_string(), status)
-    }
 }
