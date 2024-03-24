@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use nvml_wrapper as nvml;
 
@@ -115,6 +116,20 @@ fn with_device<T: serde::Serialize>(
         r => Ok(r.and_then(func).map(|v| json(&v)).replyify()),
     };
     std::future::ready(res)
+}
+
+/// Helper type for representing a duration in `ms` in a paramater
+#[derive(Copy, Clone, Debug, serde::Deserialize)]
+struct DurationParam {
+    duration: Option<std::num::NonZeroU64>,
+}
+
+impl DurationParam {
+    fn as_duration(self) -> Option<Duration> {
+        self.duration
+            .map(std::num::NonZeroU64::get)
+            .map(Duration::from_millis)
+    }
 }
 
 type Campaigns = Arc<sync::RwLock<BaseMeasurements>>;
