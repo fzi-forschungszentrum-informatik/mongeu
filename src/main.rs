@@ -33,7 +33,11 @@ async fn main() -> Result<(), nvml::error::NvmlError> {
         .and(warp::path::end())
         .map({
             let nvml = nvml.clone();
-            move || nvml.device_count().replyify()
+            move || {
+                nvml.device_count()
+                    .map(|v| warp::reply::json(&v))
+                    .replyify()
+            }
         });
 
     let device_name = warp::get()
@@ -100,7 +104,7 @@ fn with_device<T: serde::Serialize>(
 ) -> impl std::future::Future<Output = Result<impl warp::Reply, warp::Rejection>> {
     let res = match nvml.device_by_index(index) {
         Err(NvmlError::InvalidArg) => Err(warp::reject::not_found()),
-        r => Ok(r.and_then(func).replyify()),
+        r => Ok(r.and_then(func).map(|v| warp::reply::json(&v)).replyify()),
     };
     std::future::ready(res)
 }

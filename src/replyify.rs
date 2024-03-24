@@ -9,10 +9,9 @@ pub trait Replyify {
     fn replyify(self) -> impl Reply;
 }
 
-impl<T: serde::Serialize, E: Replyify> Replyify for Result<T, E> {
+impl<T: Reply, E: Replyify> Replyify for Result<T, E> {
     fn replyify(self) -> impl Reply {
-        self.map(|v| warp::reply::json(&v))
-            .map_err(Replyify::replyify)
+        self.map_err(Replyify::replyify)
     }
 }
 
