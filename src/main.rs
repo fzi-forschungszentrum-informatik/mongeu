@@ -99,7 +99,49 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let energy = energy_oneshot;
+    let energy_create = warp::post()
+        .and(campaigns_write.clone())
+        .and(warp::path::end())
+        .map({
+            let nvml = nvml.clone();
+            move |mut c: CampaignsWriteLock| {
+                c.create(nvml.as_ref())
+                    .and_then(|i| {
+                        format!("/v1/power/{i}")
+                            .try_into()
+                            .context("Could not create URI for new measurement campaign {i}")
+                    })
+                    .map(|t: warp::http::Uri| warp::redirect::see_other(t))
+                    .map_err(Replyify::replyify)
+            }
+        });
+
+    let energy_delete = warp::delete()
+        .and(campaigns_write.clone())
+        .and(warp::path::param())
+        .and(warp::path::end())
+        .map(|mut c: CampaignsWriteLock, i| {
+            use warp::http::StatusCode;
+
+            if c.delete(i).is_some() {
+                StatusCode::OK
+            } else {
+                StatusCode::NOT_FOUND
+            }
+        });
+
+    let energy_measure = warp::get()
+        .and(campaign_param.clone())
+        .and(warp::path::end())
+        .map({
+            let nvml = nvml.clone();
+            move |b: CampaignReadLock| b.measurement(nvml.as_ref()).map(|v| json(&v)).replyify()
+        });
+
+    let energy = energy_oneshot
+        .or(energy_create)
+        .or(energy_delete)
+        .or(energy_measure);
     let energy = warp::path("energy").and(energy);
 
     let v1_api = device_count.or(device).or(energy);
