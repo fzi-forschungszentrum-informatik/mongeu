@@ -91,7 +91,18 @@ async fn main() -> anyhow::Result<()> {
         .or(device_power_usage);
     let device = warp::path("device").and(device);
 
-    let v1_api = device_count.or(device);
+    let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
+        let nvml = nvml.clone();
+        move |d: DurationParam| {
+            let duration = d.as_duration().unwrap_or(Duration::from_millis(500));
+            energy_oneshot(nvml.clone(), duration)
+        }
+    });
+
+    let energy = energy_oneshot;
+    let energy = warp::path("energy").and(energy);
+
+    let v1_api = device_count.or(device).or(energy);
     let v1_api = warp::path("v1").and(v1_api);
 
     let addr = matches
@@ -116,6 +127,18 @@ fn with_device<T: serde::Serialize>(
         r => Ok(r.and_then(func).map(|v| json(&v)).replyify()),
     };
     std::future::ready(res)
+}
+
+/// Perform a "blocking" oneshot measurement over a given duration
+async fn energy_oneshot(
+    nvml: Arc<nvml::Nvml>,
+    duration: Duration,
+) -> Result<impl warp::Reply, impl warp::Reply> {
+    let base = energy::BaseMeasurement::new(nvml.as_ref()).map_err(Replyify::replyify)?;
+
+    tokio::time::sleep(duration).await;
+
+    base.measurement(nvml.as_ref()).map(|v| json(&v)).replyify()
 }
 
 /// Helper type for representing a duration in `ms` in a paramater
