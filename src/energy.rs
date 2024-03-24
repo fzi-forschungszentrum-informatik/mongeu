@@ -4,6 +4,48 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use nvml_wrapper as nvml;
 
+/// Store for measurment campaigns
+#[derive(Default, Debug)]
+pub struct BaseMeasurements {
+    next_id: BMId,
+    campaigns: std::collections::HashMap<BMId, BaseMeasurement>,
+}
+
+impl BaseMeasurements {
+    /// Create a new [BaseMeasurement]
+    pub fn create(&mut self, nvml: &nvml::Nvml) -> anyhow::Result<BMId> {
+        use std::collections::hash_map::Entry;
+
+        let id = self.next_id;
+        if let Entry::Vacant(entry) = self.campaigns.entry(id) {
+            entry.insert(
+                BaseMeasurement::new(nvml).context("Could not create a new base measurement")?,
+            );
+
+            // We choose new indexes by simple incrementation. Thus, one
+            // can easily guess ids of past base measurements after
+            // creating a new one.
+            self.next_id = id.wrapping_add(1);
+            Ok(id)
+        } else {
+            Err(anyhow::anyhow!("Targeted id {id} already taken"))
+        }
+    }
+
+    /// Delete the [BaseMeasurement] with the given id
+    pub fn delete(&mut self, id: BMId) -> Option<BaseMeasurement> {
+        self.campaigns.remove(&id)
+    }
+
+    /// Retrieve the [BaseMeasurement] with the given id
+    pub fn get(&self, id: BMId) -> Option<&BaseMeasurement> {
+        self.campaigns.get(&id)
+    }
+}
+
+/// Identifier for [BaseMeasurement] in a [BaseMeasurements]
+pub type BMId = u32;
+
 /// A base measurement across multiple devices
 #[derive(Debug)]
 pub struct BaseMeasurement {
