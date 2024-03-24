@@ -8,5 +8,5 @@ anyhow = "1.0"
 clap = { version = "4.5", features = ["cargo"] }
 nvml-wrapper = "0.10"
 serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "1.36", features = ["rt", "macros"] }
+tokio = { version = "1.36", features = ["rt", "macros", "time"] }
 warp = "0.3"
