@@ -5,12 +5,14 @@ use nvml_wrapper as nvml;
 use anyhow::Context;
 use nvml::error::NvmlError;
 use nvml::Nvml;
+use tokio::sync;
 use warp::reply::json;
 use warp::Filter;
 
 mod energy;
 mod replyify;
 
+use energy::BaseMeasurements;
 use replyify::Replyify;
 
 #[tokio::main(flavor = "current_thread")]
@@ -29,6 +31,13 @@ async fn main() -> anyhow::Result<()> {
         .get_matches();
 
     let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
+
+    let campaigns = Campaigns::default();
+    let campaign_param = {
+        let campaigns = campaigns.clone();
+        warp::query().and_then(move |i| get_campaign(campaigns.clone(), i))
+    };
+    let campaigns_write = warp::any().then(move || campaigns.clone().write_owned());
 
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
@@ -106,4 +115,19 @@ fn with_device<T: serde::Serialize>(
         r => Ok(r.and_then(func).map(|v| json(&v)).replyify()),
     };
     std::future::ready(res)
+}
+
+type Campaigns = Arc<sync::RwLock<BaseMeasurements>>;
+
+type CampaignsWriteLock = sync::OwnedRwLockWriteGuard<BaseMeasurements>;
+
+type CampaignReadLock = sync::OwnedRwLockReadGuard<BaseMeasurements, energy::BaseMeasurement>;
+
+/// Extract a single campaign under a [sync::OwnedRwLockReadGuard]
+async fn get_campaign(
+    campaigns: Campaigns,
+    id: energy::BMId,
+) -> Result<CampaignReadLock, warp::Rejection> {
+    sync::OwnedRwLockReadGuard::try_map(campaigns.read_owned().await, |c| c.get(id))
+        .map_err(|_| warp::reject::not_found())
 }
