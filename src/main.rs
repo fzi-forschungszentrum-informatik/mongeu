@@ -149,7 +149,12 @@ async fn main() -> anyhow::Result<()> {
         .or(energy_measure);
     let energy = warp::path("energy").and(energy);
 
-    let v1_api = device_count.or(device).or(energy);
+    let ping = warp::get()
+        .and(warp::path("ping"))
+        .and(warp::path::end())
+        .map(|| warp::http::StatusCode::OK);
+
+    let v1_api = device_count.or(device).or(energy).or(ping);
     let v1_api = warp::path("v1").and(v1_api);
 
     let addr = matches
