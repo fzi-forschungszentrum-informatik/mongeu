@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
     let campaigns = Campaigns::default();
     let campaign_param = {
         let campaigns = campaigns.clone();
-        warp::query().and_then(move |i| get_campaign(campaigns.clone(), i))
+        warp::path::param().and_then(move |i| get_campaign(campaigns.clone(), i))
     };
     let campaigns_write = warp::any().then(move || campaigns.clone().write_owned());
 
