@@ -64,7 +64,12 @@ async fn main() -> anyhow::Result<()> {
         let campaigns = campaigns.clone();
         warp::any().then(move || campaigns.clone().read_owned())
     };
-    let campaigns_write = warp::any().then(move || campaigns.clone().write_owned());
+    let campaigns_write = {
+        let campaigns = campaigns.clone();
+        warp::any().then(move || campaigns.clone().write_owned())
+    };
+
+    let gc_notify: Arc<tokio::sync::Notify> = Default::default();
 
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
@@ -204,9 +209,20 @@ async fn main() -> anyhow::Result<()> {
         .get_one("port")
         .cloned()
         .unwrap_or(DEFAULT_LISTEN_PORT);
-    warp::serve(v1_api)
-        .run(net::SocketAddr::new(addr, port))
-        .await;
+    let serve = warp::serve(v1_api).run(net::SocketAddr::new(addr, port));
+
+    let gc_min_age = matches
+        .get_one("gc_min_age")
+        .cloned()
+        .map(Duration::from_secs)
+        .unwrap_or(DEFAULT_GC_MIN_AGE);
+    let gc_min_campaigns = matches
+        .get_one("gc_min_campaigns")
+        .cloned()
+        .unwrap_or(DEFAULT_GC_MIN_CAMPAIGNS);
+    let gc = collect_garbage(gc_notify, campaigns, gc_min_age, gc_min_campaigns);
+
+    tokio::join!(serve, gc);
     unreachable!()
 }
 
