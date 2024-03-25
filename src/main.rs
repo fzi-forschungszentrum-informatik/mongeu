@@ -1,3 +1,4 @@
+use std::net;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -16,10 +17,11 @@ mod replyify;
 use energy::BaseMeasurements;
 use replyify::Replyify;
 
+const DEFAULT_LISTEN_ADDR: net::IpAddr = net::IpAddr::V6(net::Ipv6Addr::UNSPECIFIED);
+const DEFAULT_LISTEN_PORT: u16 = 80;
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
-    use std::net;
-
     let matches = clap::command!()
         .arg(
             clap::arg!(listen: -l --listen <ADDR> "Address to listen on for connections")
@@ -150,8 +152,11 @@ async fn main() -> anyhow::Result<()> {
     let addr = matches
         .get_one("listen")
         .cloned()
-        .unwrap_or(net::Ipv6Addr::UNSPECIFIED.into());
-    let port = matches.get_one("port").cloned().unwrap_or(80);
+        .unwrap_or(DEFAULT_LISTEN_ADDR);
+    let port = matches
+        .get_one("port")
+        .cloned()
+        .unwrap_or(DEFAULT_LISTEN_PORT);
     warp::serve(v1_api)
         .run(net::SocketAddr::new(addr, port))
         .await;
