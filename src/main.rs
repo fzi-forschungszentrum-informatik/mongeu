@@ -107,7 +107,7 @@ async fn main() -> anyhow::Result<()> {
             move |mut c: CampaignsWriteLock| {
                 c.create(nvml.as_ref())
                     .and_then(|i| {
-                        format!("/v1/power/{i}")
+                        format!("/v1/energy/{i}")
                             .try_into()
                             .context("Could not create URI for new measurement campaign {i}")
                     })
