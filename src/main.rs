@@ -39,6 +39,10 @@ async fn main() -> anyhow::Result<()> {
         let campaigns = campaigns.clone();
         warp::path::param().and_then(move |i| get_campaign(campaigns.clone(), i))
     };
+    let campaigns_read = {
+        let campaigns = campaigns.clone();
+        warp::any().then(move || campaigns.clone().read_owned())
+    };
     let campaigns_write = warp::any().then(move || campaigns.clone().write_owned());
 
     // End-point exposing the number of devices on this machine
@@ -199,6 +203,8 @@ impl DurationParam {
 }
 
 type Campaigns = Arc<sync::RwLock<BaseMeasurements>>;
+
+type CampaignsReadLock = sync::OwnedRwLockReadGuard<BaseMeasurements>;
 
 type CampaignsWriteLock = sync::OwnedRwLockWriteGuard<BaseMeasurements>;
 
