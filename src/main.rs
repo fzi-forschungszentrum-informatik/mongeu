@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use nvml_wrapper as nvml;
 
+use anyhow::Context;
 use nvml::error::NvmlError;
 use nvml::Nvml;
 use warp::reply::json;
@@ -12,7 +13,7 @@ mod replyify;
 use replyify::Replyify;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), nvml::error::NvmlError> {
+async fn main() -> anyhow::Result<()> {
     use std::net;
 
     let matches = clap::command!()
@@ -26,7 +27,7 @@ async fn main() -> Result<(), nvml::error::NvmlError> {
         )
         .get_matches();
 
-    let nvml = Nvml::init().map(Arc::new)?;
+    let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
 
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
