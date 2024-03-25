@@ -40,6 +40,10 @@ async fn main() -> anyhow::Result<()> {
                 .value_parser(clap::value_parser!(u16)),
         )
         .arg(
+            clap::arg!(base_uri: --"base-uri" <URI> "Base URI under which the API is hosted")
+                .value_parser(clap::value_parser!(u16)),
+        )
+        .arg(
             clap::arg!(oneshot_duration: --"oneshot-duration" <MILLISECS> "Default duration for oneshot measurements")
                 .value_parser(clap::value_parser!(u16)),
         )
@@ -70,6 +74,8 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let gc_notify: Arc<tokio::sync::Notify> = Default::default();
+
+    let base_uri: Arc<str> = matches.get_one("base_uri").cloned().unwrap_or("".into());
 
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
@@ -141,11 +147,12 @@ async fn main() -> anyhow::Result<()> {
         .map({
             let nvml = nvml.clone();
             let gc_notify = gc_notify.clone();
+            let base_uri = base_uri.clone();
             move |mut c: CampaignsWriteLock| {
                 let id = c.create(nvml.as_ref()).map_err(Replyify::replyify)?;
                 gc_notify.notify_one();
 
-                format!("/v1/energy/{id}")
+                format!("{base_uri}/v1/energy/{id}")
                     .try_into()
                     .context("Could not create URI for new measurement campaign {i}")
                     .map(|t: warp::http::Uri| warp::redirect::see_other(t))
