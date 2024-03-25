@@ -32,3 +32,11 @@ impl Replyify for NvmlError {
         warp::reply::with_status(self.to_string(), status)
     }
 }
+
+impl Replyify for anyhow::Error {
+    type Reply = warp::reply::WithStatus<String>;
+
+    fn replyify(self) -> Self::Reply {
+        warp::reply::with_status(self.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+    }
+}
