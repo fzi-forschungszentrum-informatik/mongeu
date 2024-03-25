@@ -174,7 +174,7 @@ async fn main() -> anyhow::Result<()> {
         .map({
             let nvml = nvml.clone();
             move |c: CampaignsReadLock| {
-                health::check(nvml.as_ref(), &*c)
+                health::check(nvml.as_ref(), &c)
                     .map(|v| json(&v))
                     .replyify()
             }
