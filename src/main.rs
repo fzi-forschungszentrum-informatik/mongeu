@@ -20,6 +20,8 @@ use replyify::Replyify;
 const DEFAULT_LISTEN_ADDR: net::IpAddr = net::IpAddr::V6(net::Ipv6Addr::UNSPECIFIED);
 const DEFAULT_LISTEN_PORT: u16 = 80;
 
+const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     let matches = clap::command!()
@@ -29,6 +31,10 @@ async fn main() -> anyhow::Result<()> {
         )
         .arg(
             clap::arg!(port: -p --port <PORT> "Port to listen on")
+                .value_parser(clap::value_parser!(u16)),
+        )
+        .arg(
+            clap::arg!(oneshot_duration: --"oneshot-duration" <MILLISECS> "Default duration for oneshot measurements")
                 .value_parser(clap::value_parser!(u16)),
         )
         .get_matches();
@@ -93,10 +99,15 @@ async fn main() -> anyhow::Result<()> {
         .or(device_power_usage);
     let device = warp::path("device").and(device);
 
+    let oneshot_duration = matches
+        .get_one("oneshot_duration")
+        .cloned()
+        .map(Duration::from_millis)
+        .unwrap_or(DEFAULT_ONESHOT_DURATION);
     let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
         let nvml = nvml.clone();
         move |d: DurationParam| {
-            let duration = d.as_duration().unwrap_or(Duration::from_millis(500));
+            let duration = d.as_duration().unwrap_or(oneshot_duration);
             energy_oneshot(nvml.clone(), duration)
         }
     });
