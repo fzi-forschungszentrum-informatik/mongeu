@@ -41,6 +41,11 @@ impl BaseMeasurements {
     pub fn get(&self, id: BMId) -> Option<&BaseMeasurement> {
         self.campaigns.get(&id)
     }
+
+    /// Retrieve the number of [BaseMeasurement]s currently held
+    pub fn len(&self) -> usize {
+        self.campaigns.len()
+    }
 }
 
 /// Identifier for [BaseMeasurement] in a [BaseMeasurements]
