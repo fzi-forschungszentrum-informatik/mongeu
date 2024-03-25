@@ -140,13 +140,14 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path::end())
         .map({
             let nvml = nvml.clone();
+            let gc_notify = gc_notify.clone();
             move |mut c: CampaignsWriteLock| {
-                c.create(nvml.as_ref())
-                    .and_then(|i| {
-                        format!("/v1/energy/{i}")
-                            .try_into()
-                            .context("Could not create URI for new measurement campaign {i}")
-                    })
+                let id = c.create(nvml.as_ref()).map_err(Replyify::replyify)?;
+                gc_notify.notify_one();
+
+                format!("/v1/energy/{id}")
+                    .try_into()
+                    .context("Could not create URI for new measurement campaign {i}")
                     .map(|t: warp::http::Uri| warp::redirect::see_other(t))
                     .map_err(Replyify::replyify)
             }
