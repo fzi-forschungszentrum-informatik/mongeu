@@ -11,6 +11,7 @@ use warp::reply::json;
 use warp::Filter;
 
 mod energy;
+mod health;
 mod replyify;
 
 use energy::BaseMeasurements;
