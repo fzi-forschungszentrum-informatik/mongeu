@@ -1,15 +1,19 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use nvml_wrapper as nvml;
 
 use anyhow::Context;
 use nvml::error::NvmlError;
 use nvml::Nvml;
+use tokio::sync;
 use warp::reply::json;
 use warp::Filter;
 
+mod energy;
 mod replyify;
 
+use energy::BaseMeasurements;
 use replyify::Replyify;
 
 #[tokio::main(flavor = "current_thread")]
@@ -28,6 +32,13 @@ async fn main() -> anyhow::Result<()> {
         .get_matches();
 
     let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
+
+    let campaigns = Campaigns::default();
+    let campaign_param = {
+        let campaigns = campaigns.clone();
+        warp::query().and_then(move |i| get_campaign(campaigns.clone(), i))
+    };
+    let campaigns_write = warp::any().then(move || campaigns.clone().write_owned());
 
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
@@ -80,7 +91,60 @@ async fn main() -> anyhow::Result<()> {
         .or(device_power_usage);
     let device = warp::path("device").and(device);
 
-    let v1_api = device_count.or(device);
+    let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
+        let nvml = nvml.clone();
+        move |d: DurationParam| {
+            let duration = d.as_duration().unwrap_or(Duration::from_millis(500));
+            energy_oneshot(nvml.clone(), duration)
+        }
+    });
+
+    let energy_create = warp::post()
+        .and(campaigns_write.clone())
+        .and(warp::path::end())
+        .map({
+            let nvml = nvml.clone();
+            move |mut c: CampaignsWriteLock| {
+                c.create(nvml.as_ref())
+                    .and_then(|i| {
+                        format!("/v1/power/{i}")
+                            .try_into()
+                            .context("Could not create URI for new measurement campaign {i}")
+                    })
+                    .map(|t: warp::http::Uri| warp::redirect::see_other(t))
+                    .map_err(Replyify::replyify)
+            }
+        });
+
+    let energy_delete = warp::delete()
+        .and(campaigns_write.clone())
+        .and(warp::path::param())
+        .and(warp::path::end())
+        .map(|mut c: CampaignsWriteLock, i| {
+            use warp::http::StatusCode;
+
+            if c.delete(i).is_some() {
+                StatusCode::OK
+            } else {
+                StatusCode::NOT_FOUND
+            }
+        });
+
+    let energy_measure = warp::get()
+        .and(campaign_param.clone())
+        .and(warp::path::end())
+        .map({
+            let nvml = nvml.clone();
+            move |b: CampaignReadLock| b.measurement(nvml.as_ref()).map(|v| json(&v)).replyify()
+        });
+
+    let energy = energy_oneshot
+        .or(energy_create)
+        .or(energy_delete)
+        .or(energy_measure);
+    let energy = warp::path("energy").and(energy);
+
+    let v1_api = device_count.or(device).or(energy);
     let v1_api = warp::path("v1").and(v1_api);
 
     let addr = matches
@@ -105,4 +169,45 @@ fn with_device<T: serde::Serialize>(
         r => Ok(r.and_then(func).map(|v| json(&v)).replyify()),
     };
     std::future::ready(res)
+}
+
+/// Perform a "blocking" oneshot measurement over a given duration
+async fn energy_oneshot(
+    nvml: Arc<nvml::Nvml>,
+    duration: Duration,
+) -> Result<impl warp::Reply, impl warp::Reply> {
+    let base = energy::BaseMeasurement::new(nvml.as_ref()).map_err(Replyify::replyify)?;
+
+    tokio::time::sleep(duration).await;
+
+    base.measurement(nvml.as_ref()).map(|v| json(&v)).replyify()
+}
+
+/// Helper type for representing a duration in `ms` in a paramater
+#[derive(Copy, Clone, Debug, serde::Deserialize)]
+struct DurationParam {
+    duration: Option<std::num::NonZeroU64>,
+}
+
+impl DurationParam {
+    fn as_duration(self) -> Option<Duration> {
+        self.duration
+            .map(std::num::NonZeroU64::get)
+            .map(Duration::from_millis)
+    }
+}
+
+type Campaigns = Arc<sync::RwLock<BaseMeasurements>>;
+
+type CampaignsWriteLock = sync::OwnedRwLockWriteGuard<BaseMeasurements>;
+
+type CampaignReadLock = sync::OwnedRwLockReadGuard<BaseMeasurements, energy::BaseMeasurement>;
+
+/// Extract a single campaign under a [sync::OwnedRwLockReadGuard]
+async fn get_campaign(
+    campaigns: Campaigns,
+    id: energy::BMId,
+) -> Result<CampaignReadLock, warp::Rejection> {
+    sync::OwnedRwLockReadGuard::try_map(campaigns.read_owned().await, |c| c.get(id))
+        .map_err(|_| warp::reject::not_found())
 }
