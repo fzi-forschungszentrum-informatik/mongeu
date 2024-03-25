@@ -24,6 +24,8 @@ const DEFAULT_LISTEN_PORT: u16 = 80;
 
 const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
 
+const DEFAULT_GC_MIN_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+const DEFAULT_GC_MIN_CAMPAIGNS: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1 << 16) };
 const MIN_GC_TICK: Duration = Duration::from_secs(60);
 
 #[tokio::main(flavor = "current_thread")]
@@ -40,6 +42,14 @@ async fn main() -> anyhow::Result<()> {
         .arg(
             clap::arg!(oneshot_duration: --"oneshot-duration" <MILLISECS> "Default duration for oneshot measurements")
                 .value_parser(clap::value_parser!(u16)),
+        )
+        .arg(
+            clap::arg!(gc_min_age: --"gc-min-age" <SECONDS> "Age at which a campaign might be collected")
+                .value_parser(clap::value_parser!(u64)),
+        )
+        .arg(
+            clap::arg!(gc_min_campaigns: --"gc-min-campaigns" <NUM> "Number of campaings at which collection will start")
+                .value_parser(clap::value_parser!(NonZeroUsize)),
         )
         .get_matches();
 
