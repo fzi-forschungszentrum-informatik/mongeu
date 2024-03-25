@@ -1,4 +1,5 @@
 use std::net;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -22,6 +23,8 @@ const DEFAULT_LISTEN_ADDR: net::IpAddr = net::IpAddr::V6(net::Ipv6Addr::UNSPECIF
 const DEFAULT_LISTEN_PORT: u16 = 80;
 
 const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
+
+const MIN_GC_TICK: Duration = Duration::from_secs(60);
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
@@ -251,4 +254,32 @@ async fn get_campaign(
 ) -> Result<CampaignReadLock, warp::Rejection> {
     sync::OwnedRwLockReadGuard::try_map(campaigns.read_owned().await, |c| c.get(id))
         .map_err(|_| warp::reject::not_found())
+}
+
+/// Runs cyclic garbage collection after being notified
+async fn collect_garbage(
+    notifier: Arc<tokio::sync::Notify>,
+    campaigns: Campaigns,
+    min_age: Duration,
+    min_campaigns: NonZeroUsize,
+) {
+    let tick_duration = std::cmp::max(min_age / 4, MIN_GC_TICK);
+
+    let mut timer = tokio::time::interval(tick_duration);
+    timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    loop {
+        let now = tokio::select! {
+            t = timer.tick() => t.into(),
+            _ = notifier.notified() => std::time::Instant::now(),
+        };
+
+        // We definitely only want to hold this lock for a short time.
+        let mut campaigns = campaigns.write().await;
+
+        // It's not woth doing anything until we reach a certain number of
+        // campaigns.
+        if campaigns.len() >= min_campaigns.get() {
+            campaigns.delete_older_than(now - min_age);
+        }
+    }
 }
