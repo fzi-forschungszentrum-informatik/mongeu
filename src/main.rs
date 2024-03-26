@@ -228,7 +228,7 @@ async fn main() -> anyhow::Result<()> {
         });
 
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
-    let v1_api = warp::path("v1").and(v1_api);
+    let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
 
     let addr = matches
         .get_one("listen")
