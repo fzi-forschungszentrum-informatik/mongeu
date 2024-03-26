@@ -81,12 +81,13 @@ impl BaseMeasurement {
 
     /// Create a new [Measurement] relative to this base
     pub fn measurement(&self, nvml: &nvml::Nvml) -> anyhow::Result<Measurement> {
-        let time = Instant::now().duration_since(self.time).as_millis();
-        self.devices
+        let duration = Instant::now().duration_since(self.time).as_millis();
+        let devices = self
+            .devices
             .iter()
             .map(|d| d.relative(nvml).context("Could not perform measurement"))
-            .collect::<Result<_, _>>()
-            .map(|d| Measurement { time, devices: d })
+            .collect::<Result<_, _>>()?;
+        Ok(Measurement { duration, devices })
     }
 }
 
@@ -94,7 +95,7 @@ impl BaseMeasurement {
 #[derive(Debug, serde::Serialize)]
 pub struct Measurement {
     /// Time passed since the start of a campaign in `ms`
-    time: u128,
+    duration: u128,
     /// Device data at the specific point in time
     devices: Vec<DeviceData>,
 }
