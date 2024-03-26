@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .get_matches();
 
-    init_logger(LevelFilter::Error, matches.get_count("verbosity").into())
+    init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
     let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
 
