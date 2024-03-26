@@ -114,6 +114,33 @@ paths:
           $ref: '#/components/responses/error'
       parameters:
       - $ref: '#/components/parameters/campaign_id'
+  /ping:
+    get:
+      summary: Simple ping endpoint
+      responses:
+        '200':
+          description: Empty ping response
+  /health:
+    get:
+      summary: Perform a health-check
+      responses:
+        '200':
+          description: Health data of the service
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_count:
+                    type: integer
+                  driver_version:
+                    type: string
+                  nvml_version:
+                    type: string
+                  campaigns:
+                    type: integer
+        default:
+          $ref: '#/components/responses/error'
 components:
   responses:
     measurement:
