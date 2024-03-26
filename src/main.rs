@@ -56,12 +56,25 @@ async fn main() -> anyhow::Result<()> {
             clap::arg!(gc_min_campaigns: --"gc-min-campaigns" <NUM> "Number of campaings at which collection will start")
                 .value_parser(clap::value_parser!(NonZeroUsize)),
         )
+        .arg(
+            clap::arg!(verbosity: -v --verbose ... "Increase the verbosity level")
+                .action(clap::ArgAction::Count),
+        )
         .get_matches();
 
-    simple_logger::SimpleLogger::new()
+    let logger = simple_logger::SimpleLogger::new()
         .with_utc_timestamps()
         .with_level(LevelFilter::Error)
-        .env()
+        .env();
+    let level = match matches.get_count("verbosity") {
+        0 => logger.max_level(),
+        1 => log::LevelFilter::Warn,
+        2 => log::LevelFilter::Info,
+        3 => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Trace,
+    };
+    logger
+        .with_level(level)
         .init()
         .context("Could not initialize logger")?;
 
