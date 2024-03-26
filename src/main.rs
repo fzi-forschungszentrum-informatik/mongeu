@@ -6,6 +6,7 @@ use std::time::Duration;
 use nvml_wrapper as nvml;
 
 use anyhow::Context;
+use log::LevelFilter;
 use nvml::error::NvmlError;
 use nvml::Nvml;
 use tokio::sync;
@@ -56,6 +57,13 @@ async fn main() -> anyhow::Result<()> {
                 .value_parser(clap::value_parser!(NonZeroUsize)),
         )
         .get_matches();
+
+    simple_logger::SimpleLogger::new()
+        .with_utc_timestamps()
+        .with_level(LevelFilter::Error)
+        .env()
+        .init()
+        .context("Could not initialize logger")?;
 
     let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
 
