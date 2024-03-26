@@ -1,0 +1,153 @@
+openapi: 3.1.0
+info:
+  title: GPU measurement service
+  summary: API for measuring energy consumption of GPUs
+  version: 1.0.0
+paths:
+  /device_count:
+    get:
+      summary: Retrieve the number of devices
+      responses:
+        '200':
+          description: The number of devices
+          content:
+            application/json:
+              schema:
+                type: integer
+        default:
+          $ref: '#/components/responses/error'
+  /device/{id}/name:
+    get:
+      summary: Retrieve the name of a device
+      responses:
+        '200':
+          description: The name of the device
+          content:
+            application/json:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/error'
+      parameters:
+      - $ref: '#/components/parameters/device_id'
+  /device/{id}/uuid:
+    get:
+      summary: Retrieve the UUID of a device
+      responses:
+        '200':
+          description: The UUID of the device
+          content:
+            application/json:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/error'
+      parameters:
+      - $ref: '#/components/parameters/device_id'
+  /device/{id}/serial:
+    get:
+      summary: Retrieve the serial of a device
+      responses:
+        '200':
+          description: The serial of the device
+          content:
+            application/json:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/error'
+      parameters:
+      - $ref: '#/components/parameters/device_id'
+  /device/{id}/power_usage:
+    get:
+      summary: Retrieve the current power usage of a device
+      responses:
+        '200':
+          description: The current power usage of the device in mW
+          content:
+            application/json:
+              schema:
+                type: integer
+        default:
+          $ref: '#/components/responses/error'
+      parameters:
+      - $ref: '#/components/parameters/device_id'
+  /energy:
+    get:
+      summary: Perform a oneshot measurement of energy consumption
+      responses:
+        '200':
+          $ref: '#/components/responses/measurement'
+        default:
+          $ref: '#/components/responses/error'
+      parameters:
+      - name: duration
+        in: query
+        description: number of ms to measure
+        schema:
+          type: integer
+    post:
+      summary: Create a new measurement campaign
+      responses:
+        '303':
+          description: Redirect to the new campaign
+        default:
+          $ref: '#/components/responses/error'
+  /energy/{campaign}:
+    get:
+      summary: Get a new measurement for the campaign
+      responses:
+        '200':
+          $ref: '#/components/responses/measurement'
+        default:
+          $ref: '#/components/responses/error'
+      parameters:
+      - $ref: '#/components/parameters/campaign_id'
+    delete:
+      summary: End a specific campaign
+      responses:
+        '200':
+          $ref: '#/components/responses/measurement'
+        '404':
+          description: A campaign with the provided id does not exist
+        default:
+          $ref: '#/components/responses/error'
+      parameters:
+      - $ref: '#/components/parameters/campaign_id'
+components:
+  responses:
+    measurement:
+      description: The duration in ms and devices' energy consumptions in mW
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              time:
+                type: integer
+              devices:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    energy:
+                      type: integer
+    error:
+      description: Unexpected error
+  parameters:
+    device_id:
+      name: id
+      in: path
+      description: device id
+      required: true
+      schema:
+        type: integer
+    campaign_id:
+      name: id
+      in: path
+      description: campaign id
+      required: true
+      schema:
+        type: integer
