@@ -62,22 +62,8 @@ async fn main() -> anyhow::Result<()> {
         )
         .get_matches();
 
-    let logger = simple_logger::SimpleLogger::new()
-        .with_utc_timestamps()
-        .with_level(LevelFilter::Error)
-        .env();
-    let level = match matches.get_count("verbosity") {
-        0 => logger.max_level(),
-        1 => log::LevelFilter::Warn,
-        2 => log::LevelFilter::Info,
-        3 => log::LevelFilter::Debug,
-        _ => log::LevelFilter::Trace,
-    };
-    logger
-        .with_level(level)
-        .init()
+    init_logger(LevelFilter::Error, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
-
     let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
 
     let campaigns = Campaigns::default();
