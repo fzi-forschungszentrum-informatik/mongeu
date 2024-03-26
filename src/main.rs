@@ -328,12 +328,18 @@ async fn collect_garbage(
             _ = notifier.notified() => std::time::Instant::now(),
         };
 
+        log::trace!("Triggering garbage collection");
+
         // We definitely only want to hold this lock for a short time.
         let mut campaigns = campaigns.write().await;
 
+        let count = campaigns.len();
+        log::trace!("Number of active campaigns is {count}");
+
         // It's not woth doing anything until we reach a certain number of
         // campaigns.
-        if campaigns.len() >= min_campaigns.get() {
+        if count >= min_campaigns.get() {
+            log::info!("Performing garbage collection");
             campaigns.delete_older_than(now - min_age);
         }
     }
