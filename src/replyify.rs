@@ -24,11 +24,15 @@ impl Replyify for NvmlError {
     type Reply = warp::reply::WithStatus<String>;
 
     fn replyify(self) -> Self::Reply {
-        let status = match self {
-            NvmlError::InvalidArg => StatusCode::NOT_FOUND,
-            NvmlError::NotSupported => StatusCode::NOT_FOUND,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        use log::Level;
+
+        let (status, level) = match self {
+            NvmlError::InvalidArg => (StatusCode::NOT_FOUND, Level::Trace),
+            NvmlError::NotSupported => (StatusCode::NOT_FOUND, Level::Trace),
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, Level::Warn),
         };
+
+        log::log!(level, "Encountered error: {self:#}");
         warp::reply::with_status(self.to_string(), status)
     }
 }
@@ -37,6 +41,7 @@ impl Replyify for anyhow::Error {
     type Reply = warp::reply::WithStatus<String>;
 
     fn replyify(self) -> Self::Reply {
+        log::warn!("Encountered error: {self:#}");
         warp::reply::with_status(self.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
     }
 }

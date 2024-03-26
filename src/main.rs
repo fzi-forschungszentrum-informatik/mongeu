@@ -6,6 +6,7 @@ use std::time::Duration;
 use nvml_wrapper as nvml;
 
 use anyhow::Context;
+use log::LevelFilter;
 use nvml::error::NvmlError;
 use nvml::Nvml;
 use tokio::sync;
@@ -55,7 +56,27 @@ async fn main() -> anyhow::Result<()> {
             clap::arg!(gc_min_campaigns: --"gc-min-campaigns" <NUM> "Number of campaings at which collection will start")
                 .value_parser(clap::value_parser!(NonZeroUsize)),
         )
+        .arg(
+            clap::arg!(verbosity: -v --verbose ... "Increase the verbosity level")
+                .action(clap::ArgAction::Count),
+        )
         .get_matches();
+
+    let logger = simple_logger::SimpleLogger::new()
+        .with_utc_timestamps()
+        .with_level(LevelFilter::Error)
+        .env();
+    let level = match matches.get_count("verbosity") {
+        0 => logger.max_level(),
+        1 => log::LevelFilter::Warn,
+        2 => log::LevelFilter::Info,
+        3 => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Trace,
+    };
+    logger
+        .with_level(level)
+        .init()
+        .context("Could not initialize logger")?;
 
     let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
 
@@ -207,7 +228,7 @@ async fn main() -> anyhow::Result<()> {
         });
 
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
-    let v1_api = warp::path("v1").and(v1_api);
+    let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
 
     let addr = matches
         .get_one("listen")
@@ -307,12 +328,18 @@ async fn collect_garbage(
             _ = notifier.notified() => std::time::Instant::now(),
         };
 
+        log::trace!("Triggering garbage collection");
+
         // We definitely only want to hold this lock for a short time.
         let mut campaigns = campaigns.write().await;
 
+        let count = campaigns.len();
+        log::trace!("Number of active campaigns is {count}");
+
         // It's not woth doing anything until we reach a certain number of
         // campaigns.
-        if campaigns.len() >= min_campaigns.get() {
+        if count >= min_campaigns.get() {
+            log::info!("Performing garbage collection");
             campaigns.delete_older_than(now - min_age);
         }
     }
