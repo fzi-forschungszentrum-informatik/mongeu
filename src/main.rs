@@ -107,6 +107,7 @@ async fn main() -> anyhow::Result<()> {
             move || nvml.device_count().map(|v| json(&v)).replyify()
         });
 
+    // End-point exposing the name of a specific device
     let device_name = warp::get()
         .and(warp::path::param::<u32>())
         .and(warp::path("name"))
@@ -116,6 +117,7 @@ async fn main() -> anyhow::Result<()> {
             move |i| with_device(nvml.as_ref(), i, |d| d.name())
         });
 
+    // End-point exposing the UUID of a specific device
     let device_uuid = warp::get()
         .and(warp::path::param::<u32>())
         .and(warp::path("uuid"))
@@ -125,6 +127,7 @@ async fn main() -> anyhow::Result<()> {
             move |i| with_device(nvml.as_ref(), i, |d| d.uuid())
         });
 
+    // End-point exposing the serial number of a specific device
     let device_serial = warp::get()
         .and(warp::path::param::<u32>())
         .and(warp::path("serial"))
@@ -134,6 +137,7 @@ async fn main() -> anyhow::Result<()> {
             move |i| with_device(nvml.as_ref(), i, |d| d.serial())
         });
 
+    // End-point exposing the current power usage of a specific device
     let device_power_usage = warp::get()
         .and(warp::path::param::<u32>())
         .and(warp::path("power_usage"))
@@ -149,6 +153,7 @@ async fn main() -> anyhow::Result<()> {
         .or(device_power_usage);
     let device = warp::path("device").and(device);
 
+    // End-point for performing a one-shot measurement of energy consumption
     let oneshot_duration = matches
         .get_one("oneshot_duration")
         .cloned()
@@ -162,6 +167,7 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    // End-point for creating a new measurement campaign
     let energy_create = warp::post()
         .and(campaigns_write.clone())
         .and(warp::path::end())
@@ -181,6 +187,7 @@ async fn main() -> anyhow::Result<()> {
             }
         });
 
+    // End-point for deleting/ending a measurement campaign
     let energy_delete = warp::delete()
         .and(campaigns_write.clone())
         .and(warp::path::param())
@@ -195,6 +202,7 @@ async fn main() -> anyhow::Result<()> {
             }
         });
 
+    // End-point for getting a (new) measurement in a campaign
     let energy_measure = warp::get()
         .and(campaign_param.clone())
         .and(warp::path::end())
@@ -209,11 +217,13 @@ async fn main() -> anyhow::Result<()> {
         .or(energy_measure);
     let energy = warp::path("energy").and(energy);
 
+    // Ping end-point
     let ping = warp::get()
         .and(warp::path("ping"))
         .and(warp::path::end())
         .map(|| warp::http::StatusCode::OK);
 
+    // End-point for performing a healtch check
     let health = warp::get()
         .and(warp::path("health"))
         .and(warp::path::end())
