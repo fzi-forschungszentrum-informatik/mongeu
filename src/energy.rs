@@ -37,6 +37,11 @@ impl BaseMeasurements {
         self.campaigns.remove(&id)
     }
 
+    /// Delete [BaseMeasurement]s older than the given `instant`
+    pub fn delete_older_than(&mut self, instant: Instant) {
+        self.campaigns.retain(|_, b| b.time < instant)
+    }
+
     /// Retrieve the [BaseMeasurement] with the given id
     pub fn get(&self, id: BMId) -> Option<&BaseMeasurement> {
         self.campaigns.get(&id)

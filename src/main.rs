@@ -1,4 +1,5 @@
 use std::net;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -23,6 +24,10 @@ const DEFAULT_LISTEN_PORT: u16 = 80;
 
 const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
 
+const DEFAULT_GC_MIN_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+const DEFAULT_GC_MIN_CAMPAIGNS: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1 << 16) };
+const MIN_GC_TICK: Duration = Duration::from_secs(60);
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     let matches = clap::command!()
@@ -38,6 +43,14 @@ async fn main() -> anyhow::Result<()> {
             clap::arg!(oneshot_duration: --"oneshot-duration" <MILLISECS> "Default duration for oneshot measurements")
                 .value_parser(clap::value_parser!(u16)),
         )
+        .arg(
+            clap::arg!(gc_min_age: --"gc-min-age" <SECONDS> "Age at which a campaign might be collected")
+                .value_parser(clap::value_parser!(u64)),
+        )
+        .arg(
+            clap::arg!(gc_min_campaigns: --"gc-min-campaigns" <NUM> "Number of campaings at which collection will start")
+                .value_parser(clap::value_parser!(NonZeroUsize)),
+        )
         .get_matches();
 
     let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
@@ -51,7 +64,12 @@ async fn main() -> anyhow::Result<()> {
         let campaigns = campaigns.clone();
         warp::any().then(move || campaigns.clone().read_owned())
     };
-    let campaigns_write = warp::any().then(move || campaigns.clone().write_owned());
+    let campaigns_write = {
+        let campaigns = campaigns.clone();
+        warp::any().then(move || campaigns.clone().write_owned())
+    };
+
+    let gc_notify: Arc<tokio::sync::Notify> = Default::default();
 
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
@@ -122,13 +140,14 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path::end())
         .map({
             let nvml = nvml.clone();
+            let gc_notify = gc_notify.clone();
             move |mut c: CampaignsWriteLock| {
-                c.create(nvml.as_ref())
-                    .and_then(|i| {
-                        format!("/v1/energy/{i}")
-                            .try_into()
-                            .context("Could not create URI for new measurement campaign {i}")
-                    })
+                let id = c.create(nvml.as_ref()).map_err(Replyify::replyify)?;
+                gc_notify.notify_one();
+
+                format!("/v1/energy/{id}")
+                    .try_into()
+                    .context("Could not create URI for new measurement campaign {i}")
                     .map(|t: warp::http::Uri| warp::redirect::see_other(t))
                     .map_err(Replyify::replyify)
             }
@@ -191,9 +210,20 @@ async fn main() -> anyhow::Result<()> {
         .get_one("port")
         .cloned()
         .unwrap_or(DEFAULT_LISTEN_PORT);
-    warp::serve(v1_api)
-        .run(net::SocketAddr::new(addr, port))
-        .await;
+    let serve = warp::serve(v1_api).run(net::SocketAddr::new(addr, port));
+
+    let gc_min_age = matches
+        .get_one("gc_min_age")
+        .cloned()
+        .map(Duration::from_secs)
+        .unwrap_or(DEFAULT_GC_MIN_AGE);
+    let gc_min_campaigns = matches
+        .get_one("gc_min_campaigns")
+        .cloned()
+        .unwrap_or(DEFAULT_GC_MIN_CAMPAIGNS);
+    let gc = collect_garbage(gc_notify, campaigns, gc_min_age, gc_min_campaigns);
+
+    tokio::join!(serve, gc);
     unreachable!()
 }
 
@@ -251,4 +281,32 @@ async fn get_campaign(
 ) -> Result<CampaignReadLock, warp::Rejection> {
     sync::OwnedRwLockReadGuard::try_map(campaigns.read_owned().await, |c| c.get(id))
         .map_err(|_| warp::reject::not_found())
+}
+
+/// Runs cyclic garbage collection after being notified
+async fn collect_garbage(
+    notifier: Arc<tokio::sync::Notify>,
+    campaigns: Campaigns,
+    min_age: Duration,
+    min_campaigns: NonZeroUsize,
+) {
+    let tick_duration = std::cmp::max(min_age / 4, MIN_GC_TICK);
+
+    let mut timer = tokio::time::interval(tick_duration);
+    timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    loop {
+        let now = tokio::select! {
+            t = timer.tick() => t.into(),
+            _ = notifier.notified() => std::time::Instant::now(),
+        };
+
+        // We definitely only want to hold this lock for a short time.
+        let mut campaigns = campaigns.write().await;
+
+        // It's not woth doing anything until we reach a certain number of
+        // campaigns.
+        if campaigns.len() >= min_campaigns.get() {
+            campaigns.delete_older_than(now - min_age);
+        }
+    }
 }
