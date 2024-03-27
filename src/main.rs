@@ -62,22 +62,8 @@ async fn main() -> anyhow::Result<()> {
         )
         .get_matches();
 
-    let logger = simple_logger::SimpleLogger::new()
-        .with_utc_timestamps()
-        .with_level(LevelFilter::Error)
-        .env();
-    let level = match matches.get_count("verbosity") {
-        0 => logger.max_level(),
-        1 => log::LevelFilter::Warn,
-        2 => log::LevelFilter::Info,
-        3 => log::LevelFilter::Debug,
-        _ => log::LevelFilter::Trace,
-    };
-    logger
-        .with_level(level)
-        .init()
+    init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
-
     let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
 
     let campaigns = Campaigns::default();
@@ -263,6 +249,21 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::join!(serve, gc);
     unreachable!()
+}
+
+/// Initialize a global logger
+fn init_logger(level: LevelFilter, modifier: usize) -> Result<(), impl std::error::Error> {
+    let logger = simple_logger::SimpleLogger::new()
+        .with_utc_timestamps()
+        .with_level(level)
+        .env();
+
+    // Sadly, there is no easy way to just increment a [Level] or [LevelFilter]
+    let num_level = logger.max_level() as usize + modifier;
+    let level = LevelFilter::iter()
+        .find(|l| *l as usize == num_level)
+        .unwrap_or(log::STATIC_MAX_LEVEL);
+    logger.with_level(level).init()
 }
 
 /// Perform an operation with a device
