@@ -42,11 +42,11 @@ async fn main() -> anyhow::Result<()> {
         )
         .arg(
             clap::arg!(base_uri: --"base-uri" <URI> "Base URI under which the API is hosted")
-                .value_parser(clap::value_parser!(u16)),
+                .value_parser(clap::value_parser!(warp::http::Uri)),
         )
         .arg(
             clap::arg!(oneshot_duration: --"oneshot-duration" <MILLISECS> "Default duration for oneshot measurements")
-                .value_parser(clap::value_parser!(u16)),
+                .value_parser(clap::value_parser!(u64)),
         )
         .arg(
             clap::arg!(gc_min_age: --"gc-min-age" <SECONDS> "Age at which a campaign might be collected")
