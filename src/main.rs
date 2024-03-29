@@ -14,6 +14,7 @@ use tokio::sync;
 use warp::reply::json;
 use warp::Filter;
 
+mod config;
 mod energy;
 mod health;
 mod replyify;
@@ -22,16 +23,6 @@ mod util;
 use energy::BaseMeasurements;
 use replyify::Replyify;
 
-const DEFAULT_LISTEN_ADDRS: [net::IpAddr; 2] = [
-    net::IpAddr::V4(net::Ipv4Addr::UNSPECIFIED),
-    net::IpAddr::V6(net::Ipv6Addr::UNSPECIFIED),
-];
-const DEFAULT_LISTEN_PORT: u16 = 80;
-
-const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
-
-const DEFAULT_GC_MIN_AGE: Duration = Duration::from_secs(24 * 60 * 60);
-const DEFAULT_GC_MIN_CAMPAIGNS: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1 << 16) };
 const MIN_GC_TICK: Duration = Duration::from_secs(60);
 
 #[tokio::main(flavor = "current_thread")]
@@ -149,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
         .get_one("oneshot_duration")
         .cloned()
         .map(Duration::from_millis)
-        .unwrap_or(DEFAULT_ONESHOT_DURATION);
+        .unwrap_or(config::DEFAULT_ONESHOT_DURATION);
     let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
         let nvml = nvml.clone();
         move |d: DurationParam| {
@@ -234,11 +225,11 @@ async fn main() -> anyhow::Result<()> {
     let port = matches
         .get_one("port")
         .cloned()
-        .unwrap_or(DEFAULT_LISTEN_PORT);
+        .unwrap_or(config::DEFAULT_LISTEN_PORT);
     let incoming = if let Some(addrs) = matches.get_many("listen") {
         incoming_from(&mut addrs.map(|p| net::SocketAddr::new(*p, port))).await
     } else {
-        let mut addrs = DEFAULT_LISTEN_ADDRS
+        let mut addrs = config::DEFAULT_LISTEN_ADDRS
             .into_iter()
             .map(|p| net::SocketAddr::new(p, port));
         incoming_from(&mut addrs).await
@@ -250,11 +241,11 @@ async fn main() -> anyhow::Result<()> {
         .get_one("gc_min_age")
         .cloned()
         .map(Duration::from_secs)
-        .unwrap_or(DEFAULT_GC_MIN_AGE);
+        .unwrap_or(config::DEFAULT_GC_MIN_AGE);
     let gc_min_campaigns = matches
         .get_one("gc_min_campaigns")
         .cloned()
-        .unwrap_or(DEFAULT_GC_MIN_CAMPAIGNS);
+        .unwrap_or(config::DEFAULT_GC_MIN_CAMPAIGNS);
     let gc = collect_garbage(gc_notify, campaigns, gc_min_age, gc_min_campaigns);
 
     tokio::join!(serve, gc);
