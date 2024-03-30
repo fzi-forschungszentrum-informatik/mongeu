@@ -37,7 +37,7 @@ const MIN_GC_TICK: Duration = Duration::from_secs(60);
 async fn main() -> anyhow::Result<()> {
     let matches = clap::command!()
         .arg(
-            clap::arg!(listen: -l --listen <ADDR> "Address to listen on for connections")
+            clap::arg!(listen: -l --listen <ADDR> ... "Listen for connections on this address")
                 .value_parser(clap::value_parser!(net::IpAddr)),
         )
         .arg(
