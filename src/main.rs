@@ -227,15 +227,20 @@ async fn main() -> anyhow::Result<()> {
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
     let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
 
-    let addr = matches
-        .get_one("listen")
-        .cloned()
-        .unwrap_or(DEFAULT_LISTEN_ADDR);
     let port = matches
         .get_one("port")
         .cloned()
         .unwrap_or(DEFAULT_LISTEN_PORT);
-    let serve = warp::serve(v1_api).run(net::SocketAddr::new(addr, port));
+    let incoming = if let Some(addrs) = matches.get_many("listen") {
+        incoming_from(&mut addrs.map(|p| net::SocketAddr::new(*p, port))).await
+    } else {
+        let mut addrs = [DEFAULT_LISTEN_ADDR]
+            .into_iter()
+            .map(|p| net::SocketAddr::new(p, port));
+        incoming_from(&mut addrs).await
+    }
+    .context("Could not start up server")?;
+    let serve = warp::serve(v1_api).run_incoming(incoming);
 
     let gc_min_age = matches
         .get_one("gc_min_age")
