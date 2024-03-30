@@ -21,7 +21,10 @@ mod replyify;
 use energy::BaseMeasurements;
 use replyify::Replyify;
 
-const DEFAULT_LISTEN_ADDR: net::IpAddr = net::IpAddr::V6(net::Ipv6Addr::UNSPECIFIED);
+const DEFAULT_LISTEN_ADDRS: [net::IpAddr; 2] = [
+    net::IpAddr::V4(net::Ipv4Addr::UNSPECIFIED),
+    net::IpAddr::V6(net::Ipv6Addr::UNSPECIFIED),
+];
 const DEFAULT_LISTEN_PORT: u16 = 80;
 
 const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
@@ -234,7 +237,7 @@ async fn main() -> anyhow::Result<()> {
     let incoming = if let Some(addrs) = matches.get_many("listen") {
         incoming_from(&mut addrs.map(|p| net::SocketAddr::new(*p, port))).await
     } else {
-        let mut addrs = [DEFAULT_LISTEN_ADDR]
+        let mut addrs = DEFAULT_LISTEN_ADDRS
             .into_iter()
             .map(|p| net::SocketAddr::new(p, port));
         incoming_from(&mut addrs).await
