@@ -9,6 +9,7 @@ use anyhow::Context;
 use log::LevelFilter;
 use nvml::error::NvmlError;
 use nvml::Nvml;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync;
 use warp::reply::json;
 use warp::Filter;
@@ -264,6 +265,30 @@ fn init_logger(level: LevelFilter, modifier: usize) -> Result<(), impl std::erro
         .find(|l| *l as usize == num_level)
         .unwrap_or(log::STATIC_MAX_LEVEL);
     logger.with_level(level).init()
+}
+
+/// Create a stream of incoming TCP connections from a addresses to bind to
+async fn incoming_from(
+    addrs: &mut dyn Iterator<Item = net::SocketAddr>,
+) -> anyhow::Result<impl futures_util::TryStream<Ok = TcpStream, Error = std::io::Error>> {
+    use futures_util::stream::{self, StreamExt};
+
+    let mut incoming = stream::SelectAll::new();
+    for addr in addrs {
+        log::trace!("Binding to address {addr}");
+        let listener = TcpListener::bind(addr)
+            .await
+            .context("Could not bind to address '{addr}'")?;
+        let listener = Arc::new(listener);
+        let tcp_streams = stream::repeat(()).then(move |_| do_accept(listener.clone()));
+        incoming.push(Box::pin(tcp_streams));
+    }
+    Ok(incoming)
+}
+
+/// Accept a connection from a given listener
+async fn do_accept(listener: Arc<TcpListener>) -> Result<TcpStream, std::io::Error> {
+    listener.accept().await.map(|(s, _)| s)
 }
 
 /// Perform an operation with a device
