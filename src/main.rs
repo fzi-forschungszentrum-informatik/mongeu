@@ -231,7 +231,7 @@ async fn main() -> anyhow::Result<()> {
     } else {
         let mut addrs = config::DEFAULT_LISTEN_ADDRS
             .into_iter()
-            .map(|p| net::SocketAddr::new(p, port));
+            .map(|p| p.socket_addr(port));
         incoming_from(&mut addrs).await
     }
     .context("Could not start up server")?;

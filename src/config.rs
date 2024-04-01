@@ -5,9 +5,9 @@ use std::time::Duration;
 
 use serde::Deserialize;
 
-pub const DEFAULT_LISTEN_ADDRS: [IpAddr; 2] = [
-    IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED),
-    IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED),
+pub const DEFAULT_LISTEN_ADDRS: [ListenAddr; 2] = [
+    ListenAddr::new(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)),
+    ListenAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED)),
 ];
 pub const DEFAULT_LISTEN_PORT: u16 = 80;
 
