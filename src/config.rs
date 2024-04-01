@@ -95,6 +95,29 @@ impl Default for Oneshot {
     }
 }
 
+/// Garbage collection configuration
+#[derive(Copy, Clone, Args, Deserialize)]
+#[serde(default)]
+pub struct GC {
+    /// Age at which a campaign might be collected
+    #[arg(long = "gc-min-age", value_name("SECONDS"), value_parser = util::parse_secs)]
+    #[serde(deserialize_with = "util::deserialize_secs")]
+    pub min_age: Duration,
+
+    /// Number of campaings at which collection will start
+    #[arg(long = "gc-min-campaigns", value_name("NUM"))]
+    pub min_campaigns: NonZeroUsize,
+}
+
+impl Default for GC {
+    fn default() -> Self {
+        Self {
+            min_age: DEFAULT_GC_MIN_AGE,
+            min_campaigns: DEFAULT_GC_MIN_CAMPAIGNS,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
