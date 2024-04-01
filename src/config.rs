@@ -31,6 +31,16 @@ pub struct Config {
     pub base_uri: Uri,
 }
 
+impl Config {
+    /// Retrieve a [Config] from a TOML file
+    pub fn from_toml_file(path: impl AsRef<std::path::Path>) -> anyhow::Result<Self> {
+        use anyhow::Context;
+
+        let toml = std::fs::read_to_string(path).context("Could not read file {path}")?;
+        toml::from_str(toml.as_ref()).context("Could not parse TOML")
+    }
+}
+
 impl Args for Config {
     fn augment_args(cmd: clap::Command) -> clap::Command {
         Self::augment_args_for_update(cmd)
