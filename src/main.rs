@@ -27,36 +27,25 @@ const MIN_GC_TICK: Duration = Duration::from_secs(60);
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
-    let matches = clap::command!()
-        .arg(
-            clap::arg!(listen: -l --listen <ADDR> ... "Listen for connections on this address")
-                .value_parser(clap::value_parser!(net::IpAddr)),
-        )
-        .arg(
-            clap::arg!(port: -p --port <PORT> "Port to listen on")
-                .value_parser(clap::value_parser!(u16)),
-        )
-        .arg(
-            clap::arg!(base_uri: --"base-uri" <URI> "Base URI under which the API is hosted")
-                .value_parser(clap::value_parser!(warp::http::Uri)),
-        )
-        .arg(
-            clap::arg!(oneshot_duration: --"oneshot-duration" <MILLISECS> "Default duration for oneshot measurements")
-                .value_parser(clap::value_parser!(u64)),
-        )
-        .arg(
-            clap::arg!(gc_min_age: --"gc-min-age" <SECONDS> "Age at which a campaign might be collected")
-                .value_parser(clap::value_parser!(u64)),
-        )
-        .arg(
-            clap::arg!(gc_min_campaigns: --"gc-min-campaigns" <NUM> "Number of campaings at which collection will start")
-                .value_parser(clap::value_parser!(NonZeroUsize)),
-        )
+    use clap::{Args, FromArgMatches};
+
+    let matches = config::Config::augment_args_for_update(clap::command!())
         .arg(
             clap::arg!(verbosity: -v --verbose ... "Increase the verbosity level")
                 .action(clap::ArgAction::Count),
         )
         .get_matches();
+
+    let mut config = config::Config::default();
+    config
+        .update_from_arg_matches(&matches)
+        .context("Could not extract configuration from CLI")?;
+    let config::Config {
+        network,
+        oneshot,
+        gc,
+        base_uri,
+    } = config;
 
     init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
