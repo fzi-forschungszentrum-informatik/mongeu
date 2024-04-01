@@ -27,6 +27,7 @@ The following command line options are recognized:
   collection. This value must be greater than `0`. Garbage collection is only
   performed when more than this number of campaigns are currently active.
   Defaults to `65536`.
+* `-c --config <FILE>`: read configuration from the provided configuration file.
 * `-v --verbose`: increase verbosity level. May be specified multiple times.
 * `-h --help`: display help
 * `-V --version`: display version

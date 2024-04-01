@@ -31,12 +31,21 @@ async fn main() -> anyhow::Result<()> {
 
     let matches = config::Config::augment_args_for_update(clap::command!())
         .arg(
+            clap::arg!(config: -c --config <FILE> "Read configuration from a TOML file")
+                .value_parser(clap::value_parser!(std::path::PathBuf)),
+        )
+        .arg(
             clap::arg!(verbosity: -v --verbose ... "Increase the verbosity level")
                 .action(clap::ArgAction::Count),
         )
         .get_matches();
 
-    let mut config = config::Config::default();
+    let mut config = matches
+        .get_one::<std::path::PathBuf>("config")
+        .map(|p| config::Config::from_toml_file(p))
+        .transpose()
+        .context("Could not read config file")?
+        .unwrap_or_default();
     config
         .update_from_arg_matches(&matches)
         .context("Could not extract configuration from CLI")?;
