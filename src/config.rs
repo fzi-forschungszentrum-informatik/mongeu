@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use clap::Args;
 use serde::Deserialize;
+use warp::http::Uri;
 
 use crate::util;
 
@@ -18,6 +19,54 @@ pub const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
 
 pub const DEFAULT_GC_MIN_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 pub const DEFAULT_GC_MIN_CAMPAIGNS: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1 << 16) };
+
+/// General configuration
+#[derive(Default, Deserialize)]
+#[serde(default)]
+pub struct Config {
+    pub network: Network,
+    pub oneshot: Oneshot,
+    pub gc: GC,
+    #[serde(deserialize_with = "util::deserialize_uri")]
+    pub base_uri: Uri,
+}
+
+impl Args for Config {
+    fn augment_args(cmd: clap::Command) -> clap::Command {
+        Self::augment_args_for_update(cmd)
+    }
+
+    fn augment_args_for_update(cmd: clap::Command) -> clap::Command {
+        let cmd = Network::augment_args_for_update(cmd);
+        let cmd = Oneshot::augment_args_for_update(cmd);
+        let cmd = GC::augment_args_for_update(cmd);
+        cmd.arg(
+            clap::arg!(base_uri: --"base-uri" <URI> "Base URI under which the API is hosted")
+                .value_parser(clap::value_parser!(Uri)),
+        )
+    }
+}
+
+impl clap::FromArgMatches for Config {
+    fn from_arg_matches(matches: &clap::ArgMatches) -> Result<Self, clap::error::Error> {
+        let mut res = Self::default();
+        res.update_from_arg_matches(matches)?;
+        Ok(res)
+    }
+
+    fn update_from_arg_matches(
+        &mut self,
+        matches: &clap::ArgMatches,
+    ) -> Result<(), clap::error::Error> {
+        self.network.update_from_arg_matches(matches)?;
+        self.oneshot.update_from_arg_matches(matches)?;
+        self.gc.update_from_arg_matches(matches)?;
+        if let Some(uri) = matches.get_one::<Uri>("base_uri") {
+            self.base_uri = uri.clone();
+        }
+        Ok(())
+    }
+}
 
 /// Network configuration
 #[derive(Clone, Args, Deserialize)]
