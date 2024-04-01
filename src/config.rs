@@ -6,6 +6,8 @@ use std::time::Duration;
 use clap::Args;
 use serde::Deserialize;
 
+use crate::util;
+
 pub const DEFAULT_LISTEN_ADDRS: [ListenAddr; 2] = [
     ListenAddr::new(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)),
     ListenAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED)),
@@ -72,6 +74,24 @@ impl std::str::FromStr for ListenAddr {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         IpAddr::from_str(s).map(Self::new)
+    }
+}
+
+/// Oneshot measurement configuration
+#[derive(Copy, Clone, Args, Deserialize)]
+#[serde(default)]
+pub struct Oneshot {
+    /// Default duration for oneshot measurements
+    #[arg(long = "oneshot-duration", value_name("MILLIS"), value_parser = util::parse_millis)]
+    #[serde(deserialize_with = "util::deserialize_millis")]
+    pub duration: Duration,
+}
+
+impl Default for Oneshot {
+    fn default() -> Self {
+        Self {
+            duration: DEFAULT_ONESHOT_DURATION,
+        }
     }
 }
 
