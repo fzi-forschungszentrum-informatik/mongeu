@@ -9,6 +9,7 @@ use anyhow::Context;
 use log::LevelFilter;
 use nvml::error::NvmlError;
 use nvml::Nvml;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync;
 use warp::reply::json;
 use warp::Filter;
@@ -20,7 +21,10 @@ mod replyify;
 use energy::BaseMeasurements;
 use replyify::Replyify;
 
-const DEFAULT_LISTEN_ADDR: net::IpAddr = net::IpAddr::V6(net::Ipv6Addr::UNSPECIFIED);
+const DEFAULT_LISTEN_ADDRS: [net::IpAddr; 2] = [
+    net::IpAddr::V4(net::Ipv4Addr::UNSPECIFIED),
+    net::IpAddr::V6(net::Ipv6Addr::UNSPECIFIED),
+];
 const DEFAULT_LISTEN_PORT: u16 = 80;
 
 const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
@@ -33,7 +37,7 @@ const MIN_GC_TICK: Duration = Duration::from_secs(60);
 async fn main() -> anyhow::Result<()> {
     let matches = clap::command!()
         .arg(
-            clap::arg!(listen: -l --listen <ADDR> "Address to listen on for connections")
+            clap::arg!(listen: -l --listen <ADDR> ... "Listen for connections on this address")
                 .value_parser(clap::value_parser!(net::IpAddr)),
         )
         .arg(
@@ -226,15 +230,20 @@ async fn main() -> anyhow::Result<()> {
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
     let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
 
-    let addr = matches
-        .get_one("listen")
-        .cloned()
-        .unwrap_or(DEFAULT_LISTEN_ADDR);
     let port = matches
         .get_one("port")
         .cloned()
         .unwrap_or(DEFAULT_LISTEN_PORT);
-    let serve = warp::serve(v1_api).run(net::SocketAddr::new(addr, port));
+    let incoming = if let Some(addrs) = matches.get_many("listen") {
+        incoming_from(&mut addrs.map(|p| net::SocketAddr::new(*p, port))).await
+    } else {
+        let mut addrs = DEFAULT_LISTEN_ADDRS
+            .into_iter()
+            .map(|p| net::SocketAddr::new(p, port));
+        incoming_from(&mut addrs).await
+    }
+    .context("Could not start up server")?;
+    let serve = warp::serve(v1_api).run_incoming(incoming);
 
     let gc_min_age = matches
         .get_one("gc_min_age")
@@ -264,6 +273,30 @@ fn init_logger(level: LevelFilter, modifier: usize) -> Result<(), impl std::erro
         .find(|l| *l as usize == num_level)
         .unwrap_or(log::STATIC_MAX_LEVEL);
     logger.with_level(level).init()
+}
+
+/// Create a stream of incoming TCP connections from a addresses to bind to
+async fn incoming_from(
+    addrs: &mut dyn Iterator<Item = net::SocketAddr>,
+) -> anyhow::Result<impl futures_util::TryStream<Ok = TcpStream, Error = std::io::Error>> {
+    use futures_util::stream::{self, StreamExt};
+
+    let mut incoming = stream::SelectAll::new();
+    for addr in addrs {
+        log::trace!("Binding to address {addr}");
+        let listener = TcpListener::bind(addr)
+            .await
+            .context("Could not bind to address '{addr}'")?;
+        let listener = Arc::new(listener);
+        let tcp_streams = stream::repeat(()).then(move |_| do_accept(listener.clone()));
+        incoming.push(Box::pin(tcp_streams));
+    }
+    Ok(incoming)
+}
+
+/// Accept a connection from a given listener
+async fn do_accept(listener: Arc<TcpListener>) -> Result<TcpStream, std::io::Error> {
+    listener.accept().await.map(|(s, _)| s)
 }
 
 /// Perform an operation with a device
