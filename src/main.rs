@@ -125,15 +125,11 @@ async fn main() -> anyhow::Result<()> {
     let device = warp::path("device").and(device);
 
     // End-point for performing a one-shot measurement of energy consumption
-    let oneshot_duration = matches
-        .get_one("oneshot_duration")
-        .cloned()
-        .map(Duration::from_millis)
-        .unwrap_or(config::DEFAULT_ONESHOT_DURATION);
     let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
         let nvml = nvml.clone();
+        let default_duration = oneshot.duration;
         move |d: DurationParam| {
-            let duration = d.as_duration().unwrap_or(oneshot_duration);
+            let duration = d.as_duration().unwrap_or(default_duration);
             energy_oneshot(nvml.clone(), duration)
         }
     });
