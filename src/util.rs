@@ -27,3 +27,14 @@ pub fn deserialize_secs<'d, D: Deserializer<'d>>(deserializer: D) -> Result<Dura
         .map(NonZeroU64::get)
         .map(Duration::from_secs)
 }
+
+/// Deserialize an [warp::http::Uri]
+pub fn deserialize_uri<'d, D: Deserializer<'d>>(
+    deserializer: D,
+) -> Result<warp::http::Uri, D::Error> {
+    use serde::de::Error;
+
+    String::deserialize(deserializer)?
+        .try_into()
+        .map_err(|e| D::Error::custom(e))
+}
