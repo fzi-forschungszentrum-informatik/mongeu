@@ -46,6 +46,7 @@ async fn main() -> anyhow::Result<()> {
         gc,
         base_uri,
     } = config;
+    let base_uri = Arc::new(base_uri);
 
     init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
@@ -66,8 +67,6 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let gc_notify: Arc<tokio::sync::Notify> = Default::default();
-
-    let base_uri: Arc<warp::http::Uri> = matches.get_one("base_uri").cloned().unwrap_or_default();
 
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
