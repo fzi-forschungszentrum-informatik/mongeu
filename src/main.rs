@@ -212,16 +212,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Could not start up server")?;
     let serve = warp::serve(v1_api).run_incoming(incoming);
 
-    let gc_min_age = matches
-        .get_one("gc_min_age")
-        .cloned()
-        .map(Duration::from_secs)
-        .unwrap_or(config::DEFAULT_GC_MIN_AGE);
-    let gc_min_campaigns = matches
-        .get_one("gc_min_campaigns")
-        .cloned()
-        .unwrap_or(config::DEFAULT_GC_MIN_CAMPAIGNS);
-    let gc = collect_garbage(gc_notify, campaigns, gc_min_age, gc_min_campaigns);
+    let gc = collect_garbage(gc_notify, campaigns, gc.min_age, gc.min_campaigns);
 
     tokio::join!(serve, gc);
     unreachable!()
