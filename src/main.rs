@@ -215,7 +215,7 @@ async fn main() -> anyhow::Result<()> {
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
     let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
 
-    let incoming = incoming_from(&mut network.listen_addrs())
+    let incoming = incoming_from(network.listen_addrs())
         .await
         .context("Could not start up server")?;
     let serve = warp::serve(v1_api).run_incoming(incoming);
@@ -243,7 +243,7 @@ fn init_logger(level: LevelFilter, modifier: usize) -> Result<(), impl std::erro
 
 /// Create a stream of incoming TCP connections from a addresses to bind to
 async fn incoming_from(
-    addrs: &mut dyn Iterator<Item = net::SocketAddr>,
+    addrs: impl IntoIterator<Item = net::SocketAddr>,
 ) -> anyhow::Result<impl futures_util::TryStream<Ok = TcpStream, Error = std::io::Error>> {
     use futures_util::stream::{self, StreamExt};
 
