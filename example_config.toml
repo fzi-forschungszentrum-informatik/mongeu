@@ -1,0 +1,15 @@
+base_uri = "/gms"
+
+[network]
+port = 80
+
+[[network.listen]]
+ip = "127.0.0.1"
+port = 8080
+
+[oneshot]
+duration = 200
+
+[gc]
+min_age = 43200
+min_campaigns = 100

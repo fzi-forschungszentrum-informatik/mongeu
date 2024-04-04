@@ -213,4 +213,26 @@ mod tests {
         ];
         assert_eq!(network.listen_addrs().collect::<Vec<_>>(), addrs);
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn example_config() {
+        let Config {
+            network,
+            oneshot,
+            gc,
+            base_uri,
+        } = toml::from_str(include_str!("../example_config.toml")).expect("Could not parse TOML");
+
+        assert_eq!(network.port, 80);
+        let addrs = [SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 8080)];
+        assert_eq!(network.listen_addrs().collect::<Vec<_>>(), addrs);
+
+        assert_eq!(oneshot.duration, Duration::from_millis(200));
+
+        assert_eq!(gc.min_age, Duration::from_secs(12 * 60 * 60));
+        assert_eq!(gc.min_campaigns.get(), 100);
+
+        assert_eq!(base_uri, "/gms");
+    }
 }
