@@ -9,16 +9,16 @@ use warp::http::Uri;
 
 use crate::util;
 
-pub const DEFAULT_LISTEN_ADDRS: [ListenAddr; 2] = [
+const DEFAULT_LISTEN_ADDRS: [ListenAddr; 2] = [
     ListenAddr::new(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)),
     ListenAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED)),
 ];
-pub const DEFAULT_LISTEN_PORT: u16 = 80;
+const DEFAULT_LISTEN_PORT: u16 = 80;
 
-pub const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
+const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
 
-pub const DEFAULT_GC_MIN_AGE: Duration = Duration::from_secs(24 * 60 * 60);
-pub const DEFAULT_GC_MIN_CAMPAIGNS: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1 << 16) };
+const DEFAULT_GC_MIN_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+const DEFAULT_GC_MIN_CAMPAIGNS: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1 << 16) };
 
 /// General configuration
 #[derive(Default, Deserialize)]
