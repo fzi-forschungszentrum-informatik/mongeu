@@ -21,6 +21,15 @@ pub fn deserialize_millis<'d, D: Deserializer<'d>>(deserializer: D) -> Result<Du
         .map(Duration::from_millis)
 }
 
+/// Deserialize a `Option<Duration>` provided in milliseconds
+pub fn deserialize_opt_millis<'d, D: Deserializer<'d>>(
+    deserializer: D,
+) -> Result<Option<Duration>, D::Error> {
+    let res = Option::deserialize(deserializer)?
+        .map(NonZeroU64::get)
+        .map(Duration::from_millis);
+    Ok(res)
+}
 /// Deserialize a non-zero [Duration] provided in seconds
 pub fn deserialize_secs<'d, D: Deserializer<'d>>(deserializer: D) -> Result<Duration, D::Error> {
     NonZeroU64::deserialize(deserializer)
