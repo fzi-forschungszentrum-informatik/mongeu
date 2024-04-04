@@ -17,6 +17,7 @@ use warp::Filter;
 mod energy;
 mod health;
 mod replyify;
+mod util;
 
 use energy::BaseMeasurements;
 use replyify::Replyify;
