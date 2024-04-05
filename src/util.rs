@@ -53,5 +53,5 @@ pub fn deserialize_uri<'d, D: Deserializer<'d>>(
 
     String::deserialize(deserializer)?
         .try_into()
-        .map_err(|e| D::Error::custom(e))
+        .map_err(D::Error::custom)
 }
