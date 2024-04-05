@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut config = matches
         .get_one::<std::path::PathBuf>("config")
-        .map(|p| config::Config::from_toml_file(p))
+        .map(config::Config::from_toml_file)
         .transpose()
         .context("Could not read config file")?
         .unwrap_or_default();
