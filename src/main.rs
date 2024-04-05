@@ -137,7 +137,7 @@ async fn main() -> anyhow::Result<()> {
         let nvml = nvml.clone();
         let default_duration = oneshot.duration;
         move |d: DurationParam| {
-            let duration = d.as_duration().unwrap_or(default_duration);
+            let duration = d.duration.unwrap_or(default_duration);
             energy_oneshot(nvml.clone(), duration)
         }
     });
@@ -293,15 +293,9 @@ async fn energy_oneshot(
 /// Helper type for representing a duration in `ms` in a paramater
 #[derive(Copy, Clone, Debug, serde::Deserialize)]
 struct DurationParam {
-    duration: Option<std::num::NonZeroU64>,
-}
-
-impl DurationParam {
-    fn as_duration(self) -> Option<Duration> {
-        self.duration
-            .map(std::num::NonZeroU64::get)
-            .map(Duration::from_millis)
-    }
+    #[serde(deserialize_with = "util::deserialize_opt_millis")]
+    #[serde(default)]
+    duration: Option<Duration>,
 }
 
 type Campaigns = Arc<sync::RwLock<BaseMeasurements>>;

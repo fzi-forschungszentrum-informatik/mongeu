@@ -4,6 +4,8 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use nvml_wrapper as nvml;
 
+use crate::util;
+
 /// Store for measurment campaigns
 #[derive(Default, Debug)]
 pub struct BaseMeasurements {
@@ -81,7 +83,7 @@ impl BaseMeasurement {
 
     /// Create a new [Measurement] relative to this base
     pub fn measurement(&self, nvml: &nvml::Nvml) -> anyhow::Result<Measurement> {
-        let duration = Instant::now().duration_since(self.time).as_millis();
+        let duration = Instant::now().duration_since(self.time);
         let devices = self
             .devices
             .iter()
@@ -95,7 +97,8 @@ impl BaseMeasurement {
 #[derive(Debug, serde::Serialize)]
 pub struct Measurement {
     /// Time passed since the start of a campaign in `ms`
-    duration: u128,
+    #[serde(serialize_with = "util::serialize_millis")]
+    duration: std::time::Duration,
     /// Device data at the specific point in time
     devices: Vec<DeviceData>,
 }
