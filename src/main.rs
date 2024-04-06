@@ -132,11 +132,10 @@ async fn main() -> anyhow::Result<()> {
 
     // End-point for performing a one-shot measurement of energy consumption
     let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
-        let nvml = nvml.clone();
         let default_duration = oneshot.duration;
         move |d: DurationParam| {
             let duration = d.duration.unwrap_or(default_duration);
-            energy_oneshot(nvml.clone(), duration)
+            energy_oneshot(nvml, duration)
         }
     });
 
@@ -145,7 +144,6 @@ async fn main() -> anyhow::Result<()> {
         .and(campaigns_write.clone())
         .and(warp::path::end())
         .map({
-            let nvml = nvml.clone();
             let gc_notify = gc_notify.clone();
             let base_uri = base_uri.clone();
             move |mut c: CampaignsWriteLock| {
