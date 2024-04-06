@@ -1,6 +1,6 @@
 use std::net;
 use std::num::NonZeroUsize;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use nvml_wrapper as nvml;
@@ -59,7 +59,9 @@ async fn main() -> anyhow::Result<()> {
 
     init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
-    let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
+
+    let nvml = Nvml::init().context("Could not initialize NVML handle")?;
+    let nvml = NVML.get_or_init(move || nvml);
 
     let campaigns = Campaigns::default();
     let campaign_param = {
@@ -93,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path::end())
         .and_then({
             let nvml = nvml.clone();
-            move |i| with_device(nvml.as_ref(), i, |d| d.name())
+            move |i| with_device(nvml, i, |d| d.name())
         });
 
     // End-point exposing the UUID of a specific device
@@ -103,7 +105,7 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path::end())
         .and_then({
             let nvml = nvml.clone();
-            move |i| with_device(nvml.as_ref(), i, |d| d.uuid())
+            move |i| with_device(nvml, i, |d| d.uuid())
         });
 
     // End-point exposing the serial number of a specific device
@@ -113,7 +115,7 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path::end())
         .and_then({
             let nvml = nvml.clone();
-            move |i| with_device(nvml.as_ref(), i, |d| d.serial())
+            move |i| with_device(nvml, i, |d| d.serial())
         });
 
     // End-point exposing the current power usage of a specific device
@@ -123,7 +125,7 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path::end())
         .and_then({
             let nvml = nvml.clone();
-            move |i| with_device(nvml.as_ref(), i, |d| d.power_usage())
+            move |i| with_device(nvml, i, |d| d.power_usage())
         });
 
     let device = device_name
@@ -151,7 +153,7 @@ async fn main() -> anyhow::Result<()> {
             let gc_notify = gc_notify.clone();
             let base_uri = base_uri.clone();
             move |mut c: CampaignsWriteLock| {
-                let id = c.create(nvml.as_ref()).map_err(Replyify::replyify)?;
+                let id = c.create(nvml).map_err(Replyify::replyify)?;
                 gc_notify.notify_one();
 
                 format!("{base_uri}/v1/energy/{id}")
@@ -183,7 +185,7 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path::end())
         .map({
             let nvml = nvml.clone();
-            move |b: CampaignReadLock| b.measurement(nvml.as_ref()).map(|v| json(&v)).replyify()
+            move |b: CampaignReadLock| b.measurement(nvml).map(|v| json(&v)).replyify()
         });
 
     let energy = energy_oneshot
@@ -205,11 +207,7 @@ async fn main() -> anyhow::Result<()> {
         .and(campaigns_read.clone())
         .map({
             let nvml = nvml.clone();
-            move |c: CampaignsReadLock| {
-                health::check(nvml.as_ref(), &c)
-                    .map(|v| json(&v))
-                    .replyify()
-            }
+            move |c: CampaignsReadLock| health::check(nvml, &c).map(|v| json(&v)).replyify()
         });
 
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
@@ -225,6 +223,9 @@ async fn main() -> anyhow::Result<()> {
     tokio::join!(serve, gc);
     unreachable!()
 }
+
+/// NVML instance
+static NVML: OnceLock<nvml::Nvml> = OnceLock::new();
 
 /// Initialize a global logger
 fn init_logger(level: LevelFilter, modifier: usize) -> Result<(), impl std::error::Error> {
@@ -280,14 +281,14 @@ fn with_device<T: serde::Serialize>(
 
 /// Perform a "blocking" oneshot measurement over a given duration
 async fn energy_oneshot(
-    nvml: Arc<nvml::Nvml>,
+    nvml: &'static nvml::Nvml,
     duration: Duration,
 ) -> Result<impl warp::Reply, impl warp::Reply> {
-    let base = energy::BaseMeasurement::new(nvml.as_ref()).map_err(Replyify::replyify)?;
+    let base = energy::BaseMeasurement::new(nvml).map_err(Replyify::replyify)?;
 
     tokio::time::sleep(duration).await;
 
-    base.measurement(nvml.as_ref()).map(|v| json(&v)).replyify()
+    base.measurement(nvml).map(|v| json(&v)).replyify()
 }
 
 /// Helper type for representing a duration in `ms` in a paramater
