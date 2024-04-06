@@ -62,7 +62,7 @@ pub type BMId = u32;
 #[derive(Debug)]
 pub struct BaseMeasurement {
     time: Instant,
-    devices: Vec<DeviceData>,
+    devices: Vec<BaseDeviceData>,
 }
 
 impl BaseMeasurement {
@@ -73,8 +73,9 @@ impl BaseMeasurement {
         let time = Instant::now();
         (0..device_count)
             .map(|i| {
-                device_by_index(nvml, i)
-                    .and_then(DeviceData::new_total)
+                nvml.device_by_index(i)
+                    .context("Could not retrieve device")
+                    .and_then(TryFrom::try_from)
                     .with_context(|| format!("Could not retrieve data for device {i}"))
             })
             .collect::<Result<Vec<_>, _>>()
@@ -87,7 +88,7 @@ impl BaseMeasurement {
         let devices = self
             .devices
             .iter()
-            .map(|d| d.relative(nvml).context("Could not perform measurement"))
+            .map(|d| d.relative().context("Could not perform measurement"))
             .collect::<Result<_, _>>()?;
         Ok(Measurement { duration, devices })
     }
