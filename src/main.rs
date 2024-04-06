@@ -182,10 +182,7 @@ async fn main() -> anyhow::Result<()> {
     let energy_measure = warp::get()
         .and(campaign_param.clone())
         .and(warp::path::end())
-        .map({
-            let nvml = nvml.clone();
-            move |b: CampaignReadLock| b.measurement(nvml).map(|v| json(&v)).replyify()
-        });
+        .map(|b: CampaignReadLock| b.measurement().map(|v| json(&v)).replyify());
 
     let energy = energy_oneshot
         .or(energy_create)
@@ -274,7 +271,7 @@ async fn energy_oneshot(
 
     tokio::time::sleep(duration).await;
 
-    base.measurement(nvml).map(|v| json(&v)).replyify()
+    base.measurement().map(|v| json(&v)).replyify()
 }
 
 /// Helper type for representing a duration in `ms` in a paramater

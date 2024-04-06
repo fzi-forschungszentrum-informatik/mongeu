@@ -83,7 +83,7 @@ impl BaseMeasurement {
     }
 
     /// Create a new [Measurement] relative to this base
-    pub fn measurement(&self, nvml: &nvml::Nvml) -> anyhow::Result<Measurement> {
+    pub fn measurement(&self) -> anyhow::Result<Measurement> {
         let duration = Instant::now().duration_since(self.time);
         let devices = self
             .devices
