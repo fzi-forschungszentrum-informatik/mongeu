@@ -1,6 +1,6 @@
 use std::net;
 use std::num::NonZeroUsize;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use nvml_wrapper as nvml;
@@ -59,7 +59,20 @@ async fn main() -> anyhow::Result<()> {
 
     init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
-    let nvml = Arc::new(Nvml::init().context("Could not initialize NVML handle")?);
+
+    let nvml = Nvml::init().context("Could not initialize NVML handle")?;
+    let nvml = NVML.get_or_init(move || nvml);
+    let device = warp::path::param().and_then(|i| {
+        let res = match nvml.device_by_index(i) {
+            Ok(d) => Ok(d),
+            Err(NvmlError::InvalidArg) => Err(warp::reject::not_found()),
+            Err(e) => {
+                log::warn!("Could not retrieve device {i}: {e}");
+                Err(warp::reject::custom(util::DeviceRetrievalError(i)))
+            }
+        };
+        std::future::ready(res)
+    });
 
     let campaigns = Campaigns::default();
     let campaign_param = {
@@ -81,50 +94,35 @@ async fn main() -> anyhow::Result<()> {
     let device_count = warp::get()
         .and(warp::path("device_count"))
         .and(warp::path::end())
-        .map({
-            let nvml = nvml.clone();
-            move || nvml.device_count().map(|v| json(&v)).replyify()
-        });
+        .map(|| nvml.device_count().map(|v| json(&v)).replyify());
 
     // End-point exposing the name of a specific device
     let device_name = warp::get()
-        .and(warp::path::param::<u32>())
+        .and(device)
         .and(warp::path("name"))
         .and(warp::path::end())
-        .and_then({
-            let nvml = nvml.clone();
-            move |i| with_device(nvml.as_ref(), i, |d| d.name())
-        });
+        .map(|d: nvml::Device| d.name().map(|v| json(&v)).replyify());
 
     // End-point exposing the UUID of a specific device
     let device_uuid = warp::get()
-        .and(warp::path::param::<u32>())
+        .and(device)
         .and(warp::path("uuid"))
         .and(warp::path::end())
-        .and_then({
-            let nvml = nvml.clone();
-            move |i| with_device(nvml.as_ref(), i, |d| d.uuid())
-        });
+        .map(|d: nvml::Device| d.uuid().map(|v| json(&v)).replyify());
 
     // End-point exposing the serial number of a specific device
     let device_serial = warp::get()
-        .and(warp::path::param::<u32>())
+        .and(device)
         .and(warp::path("serial"))
         .and(warp::path::end())
-        .and_then({
-            let nvml = nvml.clone();
-            move |i| with_device(nvml.as_ref(), i, |d| d.serial())
-        });
+        .map(|d: nvml::Device| d.serial().map(|v| json(&v)).replyify());
 
     // End-point exposing the current power usage of a specific device
     let device_power_usage = warp::get()
-        .and(warp::path::param::<u32>())
+        .and(device)
         .and(warp::path("power_usage"))
         .and(warp::path::end())
-        .and_then({
-            let nvml = nvml.clone();
-            move |i| with_device(nvml.as_ref(), i, |d| d.power_usage())
-        });
+        .map(|d: nvml::Device| d.power_usage().map(|v| json(&v)).replyify());
 
     let device = device_name
         .or(device_uuid)
@@ -134,11 +132,10 @@ async fn main() -> anyhow::Result<()> {
 
     // End-point for performing a one-shot measurement of energy consumption
     let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
-        let nvml = nvml.clone();
         let default_duration = oneshot.duration;
         move |d: DurationParam| {
             let duration = d.duration.unwrap_or(default_duration);
-            energy_oneshot(nvml.clone(), duration)
+            energy_oneshot(nvml, duration)
         }
     });
 
@@ -147,11 +144,10 @@ async fn main() -> anyhow::Result<()> {
         .and(campaigns_write.clone())
         .and(warp::path::end())
         .map({
-            let nvml = nvml.clone();
             let gc_notify = gc_notify.clone();
             let base_uri = base_uri.clone();
             move |mut c: CampaignsWriteLock| {
-                let id = c.create(nvml.as_ref()).map_err(Replyify::replyify)?;
+                let id = c.create(nvml).map_err(Replyify::replyify)?;
                 gc_notify.notify_one();
 
                 format!("{base_uri}/v1/energy/{id}")
@@ -181,10 +177,7 @@ async fn main() -> anyhow::Result<()> {
     let energy_measure = warp::get()
         .and(campaign_param.clone())
         .and(warp::path::end())
-        .map({
-            let nvml = nvml.clone();
-            move |b: CampaignReadLock| b.measurement(nvml.as_ref()).map(|v| json(&v)).replyify()
-        });
+        .map(|b: CampaignReadLock| b.measurement().map(|v| json(&v)).replyify());
 
     let energy = energy_oneshot
         .or(energy_create)
@@ -203,14 +196,7 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path("health"))
         .and(warp::path::end())
         .and(campaigns_read.clone())
-        .map({
-            let nvml = nvml.clone();
-            move |c: CampaignsReadLock| {
-                health::check(nvml.as_ref(), &c)
-                    .map(|v| json(&v))
-                    .replyify()
-            }
-        });
+        .map(|c: CampaignsReadLock| health::check(nvml, &c).map(|v| json(&v)).replyify());
 
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
     let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
@@ -225,6 +211,9 @@ async fn main() -> anyhow::Result<()> {
     tokio::join!(serve, gc);
     unreachable!()
 }
+
+/// NVML instance
+static NVML: OnceLock<nvml::Nvml> = OnceLock::new();
 
 /// Initialize a global logger
 fn init_logger(level: LevelFilter, modifier: usize) -> Result<(), impl std::error::Error> {
@@ -265,29 +254,16 @@ async fn do_accept(listener: Arc<TcpListener>) -> Result<TcpStream, std::io::Err
     listener.accept().await.map(|(s, _)| s)
 }
 
-/// Perform an operation with a device
-fn with_device<T: serde::Serialize>(
-    nvml: &nvml::Nvml,
-    index: u32,
-    func: impl Fn(nvml::Device) -> Result<T, NvmlError>,
-) -> impl std::future::Future<Output = Result<impl warp::Reply, warp::Rejection>> {
-    let res = match nvml.device_by_index(index) {
-        Err(NvmlError::InvalidArg) => Err(warp::reject::not_found()),
-        r => Ok(r.and_then(func).map(|v| json(&v)).replyify()),
-    };
-    std::future::ready(res)
-}
-
 /// Perform a "blocking" oneshot measurement over a given duration
 async fn energy_oneshot(
-    nvml: Arc<nvml::Nvml>,
+    nvml: &'static nvml::Nvml,
     duration: Duration,
 ) -> Result<impl warp::Reply, impl warp::Reply> {
-    let base = energy::BaseMeasurement::new(nvml.as_ref()).map_err(Replyify::replyify)?;
+    let base = energy::BaseMeasurement::new(nvml).map_err(Replyify::replyify)?;
 
     tokio::time::sleep(duration).await;
 
-    base.measurement(nvml.as_ref()).map(|v| json(&v)).replyify()
+    base.measurement().map(|v| json(&v)).replyify()
 }
 
 /// Helper type for representing a duration in `ms` in a paramater

@@ -55,3 +55,9 @@ pub fn deserialize_uri<'d, D: Deserializer<'d>>(
         .try_into()
         .map_err(D::Error::custom)
 }
+
+/// Rejection for failure to retrieve an [nvml_wrapper::Device]
+#[derive(Debug)]
+pub struct DeviceRetrievalError(pub u32);
+
+impl warp::reject::Reject for DeviceRetrievalError {}
