@@ -265,19 +265,6 @@ async fn do_accept(listener: Arc<TcpListener>) -> Result<TcpStream, std::io::Err
     listener.accept().await.map(|(s, _)| s)
 }
 
-/// Perform an operation with a device
-fn with_device<T: serde::Serialize>(
-    nvml: &nvml::Nvml,
-    index: u32,
-    func: impl Fn(nvml::Device) -> Result<T, NvmlError>,
-) -> impl std::future::Future<Output = Result<impl warp::Reply, warp::Rejection>> {
-    let res = match nvml.device_by_index(index) {
-        Err(NvmlError::InvalidArg) => Err(warp::reject::not_found()),
-        r => Ok(r.and_then(func).map(|v| json(&v)).replyify()),
-    };
-    std::future::ready(res)
-}
-
 /// Perform a "blocking" oneshot measurement over a given duration
 async fn energy_oneshot(
     nvml: &'static nvml::Nvml,
