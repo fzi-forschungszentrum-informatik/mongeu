@@ -15,7 +15,7 @@ pub struct BaseMeasurements {
 
 impl BaseMeasurements {
     /// Create a new [BaseMeasurement]
-    pub fn create(&mut self, nvml: &nvml::Nvml) -> anyhow::Result<BMId> {
+    pub fn create(&mut self, nvml: &'static nvml::Nvml) -> anyhow::Result<BMId> {
         use std::collections::hash_map::Entry;
 
         let id = self.next_id;
