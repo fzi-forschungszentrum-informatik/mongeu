@@ -93,6 +93,42 @@ impl BaseMeasurement {
     }
 }
 
+/// Total energy consumption of a specific device
+#[derive(Debug)]
+struct BaseDeviceData {
+    /// Device
+    device: nvml::Device<'static>,
+    /// Energy consumption of the device in `mJ`
+    energy: u64,
+}
+
+impl BaseDeviceData {
+    /// Compute new relative [DeviceData]
+    pub fn relative(&self) -> Result<DeviceData> {
+        let id = self
+            .device
+            .index()
+            .context("Could not determine index of device")?;
+        let energy = self
+            .device
+            .total_energy_consumption()
+            .with_context(|| format!("Could not retrieve total energy consumption of device {id}"))?
+            .saturating_sub(self.energy);
+        Ok(DeviceData { id, energy })
+    }
+}
+
+impl TryFrom<nvml::Device<'static>> for BaseDeviceData {
+    type Error = anyhow::Error;
+
+    fn try_from(device: nvml::Device<'static>) -> Result<Self, Self::Error> {
+        device
+            .total_energy_consumption()
+            .context("Could not retrieve total energy consumption of device")
+            .map(|energy| Self { device, energy })
+    }
+}
+
 /// A measurement across multiple devices
 #[derive(Debug, serde::Serialize)]
 pub struct Measurement {
