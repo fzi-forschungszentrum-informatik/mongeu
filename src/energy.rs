@@ -148,16 +148,3 @@ pub struct DeviceData {
     /// Energy consumption of the device in `mJ`
     energy: u64,
 }
-
-/// [nvml::Nvml::device_by_index] with [Context]
-fn device_by_index(nvml: &nvml::Nvml, id: u32) -> Result<nvml::Device> {
-    nvml.device_by_index(id)
-        .with_context(|| format!("Could not retrieve device {id}"))
-}
-
-/// [nvml::Device::total_energy_consumption] with [Context]
-fn total_energy_consumption(device: nvml::Device, id: u32) -> Result<u64> {
-    device
-        .total_energy_consumption()
-        .with_context(|| format!("Could not retrieve total energy consumption of device {id}"))
-}
