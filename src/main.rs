@@ -101,43 +101,31 @@ async fn main() -> anyhow::Result<()> {
 
     // End-point exposing the name of a specific device
     let device_name = warp::get()
-        .and(warp::path::param::<u32>())
+        .and(device)
         .and(warp::path("name"))
         .and(warp::path::end())
-        .and_then({
-            let nvml = nvml.clone();
-            move |i| with_device(nvml, i, |d| d.name())
-        });
+        .map(|d: nvml::Device| d.name().map(|v| json(&v)).replyify());
 
     // End-point exposing the UUID of a specific device
     let device_uuid = warp::get()
-        .and(warp::path::param::<u32>())
+        .and(device)
         .and(warp::path("uuid"))
         .and(warp::path::end())
-        .and_then({
-            let nvml = nvml.clone();
-            move |i| with_device(nvml, i, |d| d.uuid())
-        });
+        .map(|d: nvml::Device| d.uuid().map(|v| json(&v)).replyify());
 
     // End-point exposing the serial number of a specific device
     let device_serial = warp::get()
-        .and(warp::path::param::<u32>())
+        .and(device)
         .and(warp::path("serial"))
         .and(warp::path::end())
-        .and_then({
-            let nvml = nvml.clone();
-            move |i| with_device(nvml, i, |d| d.serial())
-        });
+        .map(|d: nvml::Device| d.serial().map(|v| json(&v)).replyify());
 
     // End-point exposing the current power usage of a specific device
     let device_power_usage = warp::get()
-        .and(warp::path::param::<u32>())
+        .and(device)
         .and(warp::path("power_usage"))
         .and(warp::path::end())
-        .and_then({
-            let nvml = nvml.clone();
-            move |i| with_device(nvml, i, |d| d.power_usage())
-        });
+        .map(|d: nvml::Device| d.power_usage().map(|v| json(&v)).replyify());
 
     let device = device_name
         .or(device_uuid)
