@@ -88,8 +88,6 @@ async fn main() -> anyhow::Result<()> {
         warp::any().then(move || campaigns.clone().write_owned())
     };
 
-    let gc_notify: Arc<tokio::sync::Notify> = Default::default();
-
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
         .and(warp::path("device_count"))
@@ -144,11 +142,10 @@ async fn main() -> anyhow::Result<()> {
         .and(campaigns_write.clone())
         .and(warp::path::end())
         .map({
-            let gc_notify = gc_notify.clone();
             let base_uri = base_uri.clone();
             move |mut c: CampaignsWriteLock| {
                 let id = c.create(nvml).map_err(Replyify::replyify)?;
-                gc_notify.notify_one();
+                GC_NOTIFIER.notify_one();
 
                 format!("{base_uri}/v1/energy/{id}")
                     .try_into()
@@ -206,7 +203,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Could not start up server")?;
     let serve = warp::serve(v1_api).run_incoming(incoming);
 
-    let gc = collect_garbage(gc_notify, campaigns, gc.min_age, gc.min_campaigns);
+    let gc = collect_garbage(campaigns, gc.min_age, gc.min_campaigns);
 
     tokio::join!(serve, gc);
     unreachable!()
@@ -292,12 +289,7 @@ async fn get_campaign(
 }
 
 /// Runs cyclic garbage collection after being notified
-async fn collect_garbage(
-    notifier: Arc<tokio::sync::Notify>,
-    campaigns: Campaigns,
-    min_age: Duration,
-    min_campaigns: NonZeroUsize,
-) {
+async fn collect_garbage(campaigns: Campaigns, min_age: Duration, min_campaigns: NonZeroUsize) {
     let tick_duration = std::cmp::max(min_age / 4, MIN_GC_TICK);
 
     let mut timer = tokio::time::interval(tick_duration);
@@ -305,7 +297,7 @@ async fn collect_garbage(
     loop {
         let now = tokio::select! {
             t = timer.tick() => t.into(),
-            _ = notifier.notified() => std::time::Instant::now(),
+            _ = GC_NOTIFIER.notified() => std::time::Instant::now(),
         };
 
         log::trace!("Triggering garbage collection");
@@ -324,3 +316,5 @@ async fn collect_garbage(
         }
     }
 }
+
+static GC_NOTIFIER: sync::Notify = sync::Notify::const_new();
