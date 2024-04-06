@@ -196,10 +196,7 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path("health"))
         .and(warp::path::end())
         .and(campaigns_read.clone())
-        .map({
-            let nvml = nvml.clone();
-            move |c: CampaignsReadLock| health::check(nvml, &c).map(|v| json(&v)).replyify()
-        });
+        .map(|c: CampaignsReadLock| health::check(nvml, &c).map(|v| json(&v)).replyify());
 
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
     let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
