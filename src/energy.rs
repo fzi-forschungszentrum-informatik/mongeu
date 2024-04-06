@@ -149,27 +149,6 @@ pub struct DeviceData {
     energy: u64,
 }
 
-impl DeviceData {
-    /// Create a new total device data for the current time instant
-    pub fn new_total(device: nvml::Device) -> Result<Self> {
-        let id = device
-            .index()
-            .context("Could not determine index of device")?;
-        let energy = total_energy_consumption(device, id)?;
-        Ok(Self { id, energy })
-    }
-
-    /// Compute new relative device data from total device data
-    pub fn relative(self, nvml: &nvml::Nvml) -> Result<Self> {
-        device_by_index(nvml, self.id)
-            .and_then(|d| total_energy_consumption(d, self.id))
-            .map(|e| Self {
-                energy: e.saturating_sub(self.energy),
-                ..self
-            })
-    }
-}
-
 /// [nvml::Nvml::device_by_index] with [Context]
 fn device_by_index(nvml: &nvml::Nvml, id: u32) -> Result<nvml::Device> {
     nvml.device_by_index(id)
