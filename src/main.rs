@@ -62,6 +62,17 @@ async fn main() -> anyhow::Result<()> {
 
     let nvml = Nvml::init().context("Could not initialize NVML handle")?;
     let nvml = NVML.get_or_init(move || nvml);
+    let device = warp::path::param().and_then(|i| {
+        let res = match nvml.device_by_index(i) {
+            Ok(d) => Ok(d),
+            Err(NvmlError::InvalidArg) => Err(warp::reject::not_found()),
+            Err(e) => {
+                log::warn!("Could not retrieve device {i}: {e}");
+                Err(warp::reject::custom(util::DeviceRetrievalError(i)))
+            }
+        };
+        std::future::ready(res)
+    });
 
     let campaigns = Campaigns::default();
     let campaign_param = {
