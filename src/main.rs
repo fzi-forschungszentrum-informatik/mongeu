@@ -94,10 +94,7 @@ async fn main() -> anyhow::Result<()> {
     let device_count = warp::get()
         .and(warp::path("device_count"))
         .and(warp::path::end())
-        .map({
-            let nvml = nvml.clone();
-            move || nvml.device_count().map(|v| json(&v)).replyify()
-        });
+        .map(|| nvml.device_count().map(|v| json(&v)).replyify());
 
     // End-point exposing the name of a specific device
     let device_name = warp::get()
