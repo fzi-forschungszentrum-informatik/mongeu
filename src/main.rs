@@ -75,18 +75,9 @@ async fn main() -> anyhow::Result<()> {
     });
 
     let campaigns = CAMPAIGNS.get_or_init(Default::default);
-    let campaign_param = {
-        let campaigns = campaigns.clone();
-        warp::path::param().and_then(move |i| get_campaign(campaigns.clone(), i))
-    };
-    let campaigns_read = {
-        let campaigns = campaigns.clone();
-        warp::any().then(move || campaigns.clone().read())
-    };
-    let campaigns_write = {
-        let campaigns = campaigns.clone();
-        warp::any().then(move || campaigns.clone().write())
-    };
+    let campaign_param = warp::path::param().and_then(|i| get_campaign(campaigns, i));
+    let campaigns_read = warp::any().then(|| campaigns.read());
+    let campaigns_write = warp::any().then(|| campaigns.write());
 
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
