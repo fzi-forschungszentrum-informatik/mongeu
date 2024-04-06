@@ -67,7 +67,7 @@ pub struct BaseMeasurement {
 
 impl BaseMeasurement {
     /// Create a new base measurement
-    pub fn new(nvml: &nvml::Nvml) -> anyhow::Result<Self> {
+    pub fn new(nvml: &'static nvml::Nvml) -> anyhow::Result<Self> {
         let device_count = nvml.device_count()?;
 
         let time = Instant::now();
