@@ -74,19 +74,10 @@ async fn main() -> anyhow::Result<()> {
         std::future::ready(res)
     });
 
-    let campaigns = Campaigns::default();
-    let campaign_param = {
-        let campaigns = campaigns.clone();
-        warp::path::param().and_then(move |i| get_campaign(campaigns.clone(), i))
-    };
-    let campaigns_read = {
-        let campaigns = campaigns.clone();
-        warp::any().then(move || campaigns.clone().read_owned())
-    };
-    let campaigns_write = {
-        let campaigns = campaigns.clone();
-        warp::any().then(move || campaigns.clone().write_owned())
-    };
+    let campaigns = CAMPAIGNS.get_or_init(Default::default);
+    let campaign_param = warp::path::param().and_then(|i| get_campaign(campaigns, i));
+    let campaigns_read = warp::any().then(|| campaigns.read());
+    let campaigns_write = warp::any().then(|| campaigns.write());
 
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
@@ -271,25 +262,27 @@ struct DurationParam {
     duration: Option<Duration>,
 }
 
-type Campaigns = Arc<sync::RwLock<BaseMeasurements>>;
+type Campaigns = sync::RwLock<BaseMeasurements>;
 
-type CampaignsReadLock = sync::OwnedRwLockReadGuard<BaseMeasurements>;
+type CampaignsReadLock = sync::RwLockReadGuard<'static, BaseMeasurements>;
 
-type CampaignsWriteLock = sync::OwnedRwLockWriteGuard<BaseMeasurements>;
+type CampaignsWriteLock = sync::RwLockWriteGuard<'static, BaseMeasurements>;
 
-type CampaignReadLock = sync::OwnedRwLockReadGuard<BaseMeasurements, energy::BaseMeasurement>;
+type CampaignReadLock = sync::RwLockReadGuard<'static, energy::BaseMeasurement>;
 
-/// Extract a single campaign under a [sync::OwnedRwLockReadGuard]
+/// Extract a single campaign under a [sync::RwLockReadGuard]
 async fn get_campaign(
-    campaigns: Campaigns,
+    campaigns: &'static Campaigns,
     id: energy::BMId,
 ) -> Result<CampaignReadLock, warp::Rejection> {
-    sync::OwnedRwLockReadGuard::try_map(campaigns.read_owned().await, |c| c.get(id))
+    sync::RwLockReadGuard::try_map(campaigns.read().await, |c| c.get(id))
         .map_err(|_| warp::reject::not_found())
 }
 
+static CAMPAIGNS: OnceLock<Campaigns> = OnceLock::new();
+
 /// Runs cyclic garbage collection after being notified
-async fn collect_garbage(campaigns: Campaigns, min_age: Duration, min_campaigns: NonZeroUsize) {
+async fn collect_garbage(campaigns: &Campaigns, min_age: Duration, min_campaigns: NonZeroUsize) {
     let tick_duration = std::cmp::max(min_age / 4, MIN_GC_TICK);
 
     let mut timer = tokio::time::interval(tick_duration);
