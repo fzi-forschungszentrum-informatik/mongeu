@@ -130,8 +130,8 @@ async fn main() -> anyhow::Result<()> {
 
     // End-point for creating a new measurement campaign
     let energy_create = warp::post()
-        .and(campaigns_write)
         .and(warp::path::end())
+        .and(campaigns_write)
         .map({
             let base_uri = base_uri.clone();
             move |mut c: CampaignsWriteLock| {
@@ -148,10 +148,10 @@ async fn main() -> anyhow::Result<()> {
 
     // End-point for deleting/ending a measurement campaign
     let energy_delete = warp::delete()
-        .and(campaigns_write)
         .and(warp::path::param())
         .and(warp::path::end())
-        .map(|mut c: CampaignsWriteLock, i| {
+        .and(campaigns_write)
+        .map(|i, mut c: CampaignsWriteLock| {
             use warp::http::StatusCode;
 
             if c.delete(i).is_some() {
