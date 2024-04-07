@@ -8,6 +8,7 @@ use crate::energy::BaseMeasurements;
 #[derive(Debug, serde::Serialize)]
 pub struct Health {
     device_count: u32,
+    version: &'static str,
     driver_version: String,
     nvml_version: String,
     campaigns: usize,
@@ -24,9 +25,11 @@ pub fn check(nvml: &nvml_wrapper::Nvml, campaigns: &BaseMeasurements) -> Result<
     let nvml_version = nvml
         .sys_nvml_version()
         .context("Could not retrieve NVML version")?;
+    let version = env!("CARGO_PKG_VERSION");
     let campaigns = campaigns.len();
     Ok(Health {
         device_count,
+        version,
         driver_version,
         nvml_version,
         campaigns,

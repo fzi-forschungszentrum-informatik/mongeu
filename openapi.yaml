@@ -133,6 +133,8 @@ paths:
                 properties:
                   device_count:
                     type: integer
+                  version:
+                    type: string
                   driver_version:
                     type: string
                   nvml_version:
