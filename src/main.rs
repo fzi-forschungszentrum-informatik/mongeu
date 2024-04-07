@@ -130,7 +130,7 @@ async fn main() -> anyhow::Result<()> {
 
     // End-point for creating a new measurement campaign
     let energy_create = warp::post()
-        .and(campaigns_write.clone())
+        .and(campaigns_write)
         .and(warp::path::end())
         .map({
             let base_uri = base_uri.clone();
@@ -148,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
 
     // End-point for deleting/ending a measurement campaign
     let energy_delete = warp::delete()
-        .and(campaigns_write.clone())
+        .and(campaigns_write)
         .and(warp::path::param())
         .and(warp::path::end())
         .map(|mut c: CampaignsWriteLock, i| {
@@ -163,7 +163,7 @@ async fn main() -> anyhow::Result<()> {
 
     // End-point for getting a (new) measurement in a campaign
     let energy_measure = warp::get()
-        .and(campaign_param.clone())
+        .and(campaign_param)
         .and(warp::path::end())
         .map(|b: CampaignReadLock| b.measurement().map(|v| json(&v)).replyify());
 
@@ -183,7 +183,7 @@ async fn main() -> anyhow::Result<()> {
     let health = warp::get()
         .and(warp::path("health"))
         .and(warp::path::end())
-        .and(campaigns_read.clone())
+        .and(campaigns_read)
         .map(|c: CampaignsReadLock| health::check(nvml, &c).map(|v| json(&v)).replyify());
 
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
