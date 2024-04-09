@@ -86,39 +86,23 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path::end())
         .map(|| nvml.device_count().map(|v| json(&v)).replyify());
 
-    // End-point exposing the name of a specific device
-    let device_name = warp::get()
+    // End-points exposing various device info
+    let device_info = warp::get()
         .and(device)
-        .and(warp::path("name"))
+        .and(warp::path::param())
         .and(warp::path::end())
-        .map(|d: nvml::Device| d.name().map(|v| json(&v)).replyify());
+        .map(|d: nvml::Device, p: param::DeviceProperty| {
+            use param::DeviceProperty as DP;
+            match p {
+                DP::Name => d.name().map(|v| json(&v)),
+                DP::Uuid => d.uuid().map(|v| json(&v)),
+                DP::Serial => d.serial().map(|v| json(&v)),
+                DP::PowerUsage => d.power_usage().map(|v| json(&v)),
+            }
+            .replyify()
+        });
 
-    // End-point exposing the UUID of a specific device
-    let device_uuid = warp::get()
-        .and(device)
-        .and(warp::path("uuid"))
-        .and(warp::path::end())
-        .map(|d: nvml::Device| d.uuid().map(|v| json(&v)).replyify());
-
-    // End-point exposing the serial number of a specific device
-    let device_serial = warp::get()
-        .and(device)
-        .and(warp::path("serial"))
-        .and(warp::path::end())
-        .map(|d: nvml::Device| d.serial().map(|v| json(&v)).replyify());
-
-    // End-point exposing the current power usage of a specific device
-    let device_power_usage = warp::get()
-        .and(device)
-        .and(warp::path("power_usage"))
-        .and(warp::path::end())
-        .map(|d: nvml::Device| d.power_usage().map(|v| json(&v)).replyify());
-
-    let device = device_name
-        .or(device_uuid)
-        .or(device_serial)
-        .or(device_power_usage);
-    let device = warp::path("device").and(device);
+    let device = warp::path("device").and(device_info);
 
     // End-point for performing a one-shot measurement of energy consumption
     let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
