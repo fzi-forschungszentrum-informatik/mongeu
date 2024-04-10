@@ -17,6 +17,7 @@ use warp::Filter;
 mod config;
 mod energy;
 mod health;
+mod param;
 mod replyify;
 mod util;
 
