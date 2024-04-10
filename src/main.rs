@@ -123,7 +123,7 @@ async fn main() -> anyhow::Result<()> {
     // End-point for performing a one-shot measurement of energy consumption
     let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
         let default_duration = oneshot.duration;
-        move |d: DurationParam| {
+        move |d: param::Duration| {
             let duration = d.duration.unwrap_or(default_duration);
             energy_oneshot(nvml, duration)
         }
@@ -253,14 +253,6 @@ async fn energy_oneshot(
     tokio::time::sleep(duration).await;
 
     base.measurement().map(|v| json(&v)).replyify()
-}
-
-/// Helper type for representing a duration in `ms` in a paramater
-#[derive(Copy, Clone, Debug, serde::Deserialize)]
-struct DurationParam {
-    #[serde(deserialize_with = "util::deserialize_opt_millis")]
-    #[serde(default)]
-    duration: Option<Duration>,
 }
 
 type Campaigns = sync::RwLock<BaseMeasurements>;
