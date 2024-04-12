@@ -148,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
                 let id = c.create(nvml).map_err(Replyify::replyify)?;
                 GC_NOTIFIER.notify_one();
 
-                format!("{base_uri}/v1/energy/{id}")
+                format!("{base_uri}v1/energy/{id}")
                     .try_into()
                     .context("Could not create URI for new measurement campaign {i}")
                     .map(|t: warp::http::Uri| warp::redirect::see_other(t))
