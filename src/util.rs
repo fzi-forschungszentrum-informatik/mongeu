@@ -2,7 +2,9 @@
 use std::num::{NonZeroU64, ParseIntError};
 use std::time::Duration;
 
+use anyhow::Context;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use warp::http::Uri;
 
 /// Parse a non-zero [Duration] provided in milliseconds
 pub fn parse_millis(s: &str) -> Result<Duration, ParseIntError> {
@@ -54,6 +56,19 @@ pub fn deserialize_uri<'d, D: Deserializer<'d>>(
     String::deserialize(deserializer)?
         .try_into()
         .map_err(D::Error::custom)
+}
+
+/// Sanitize the given URI, making it usable as a base URI
+fn sanitize_base_uri(uri: Uri) -> anyhow::Result<Uri> {
+    anyhow::ensure!(uri.query().is_none(), "Base URI '{uri}' has query!",);
+
+    if !uri.path().ends_with('/') {
+        format!("{uri}/")
+            .try_into()
+            .context("Could not sanitize base URI")
+    } else {
+        Ok(uri)
+    }
 }
 
 /// Rejection for failure to retrieve an [nvml_wrapper::Device]
