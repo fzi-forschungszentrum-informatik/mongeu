@@ -241,4 +241,11 @@ mod tests {
 
         assert_eq!(base_uri, "/gms/");
     }
+
+    #[test]
+    fn sane_default_uri() {
+        let config: Config = Default::default();
+        assert_eq!(config.base_uri.query(), None);
+        assert_eq!(config.base_uri.path(), "/");
+    }
 }
