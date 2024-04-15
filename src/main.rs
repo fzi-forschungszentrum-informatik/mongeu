@@ -11,7 +11,6 @@ use nvml::error::NvmlError;
 use nvml::Nvml;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync;
-use warp::reply::json;
 use warp::Filter;
 
 mod config;
@@ -22,7 +21,7 @@ mod replyify;
 mod util;
 
 use energy::BaseMeasurements;
-use replyify::Replyify;
+use replyify::{Replyify, ResultExt};
 
 const MIN_GC_TICK: Duration = Duration::from_secs(60);
 
@@ -99,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
     let device_count = warp::get()
         .and(warp::path("device_count"))
         .and(warp::path::end())
-        .map(|| nvml.device_count().map(|v| json(&v)).replyify());
+        .map(|| nvml.device_count().json_reply());
 
     // End-points exposing various device info
     let device_info = warp::get()
@@ -109,12 +108,11 @@ async fn main() -> anyhow::Result<()> {
         .map(|d: nvml::Device, p: param::DeviceProperty| {
             use param::DeviceProperty as DP;
             match p {
-                DP::Name => d.name().map(|v| json(&v)),
-                DP::Uuid => d.uuid().map(|v| json(&v)),
-                DP::Serial => d.serial().map(|v| json(&v)),
-                DP::PowerUsage => d.power_usage().map(|v| json(&v)),
+                DP::Name => d.name().json_reply(),
+                DP::Uuid => d.uuid().json_reply(),
+                DP::Serial => d.serial().json_reply(),
+                DP::PowerUsage => d.power_usage().json_reply(),
             }
-            .replyify()
         });
 
     let device = warp::path("device").and(device_info);
@@ -170,7 +168,7 @@ async fn main() -> anyhow::Result<()> {
     let energy_measure = warp::get()
         .and(campaign_param)
         .and(warp::path::end())
-        .map(|b: CampaignReadLock| b.measurement().map(|v| json(&v)).replyify());
+        .map(|b: CampaignReadLock| b.measurement().json_reply());
 
     let energy = energy_oneshot
         .or(energy_create)
@@ -189,7 +187,7 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path("health"))
         .and(warp::path::end())
         .and(campaigns_read)
-        .map(|c: CampaignsReadLock| health::check(nvml, &c).map(|v| json(&v)).replyify());
+        .map(|c: CampaignsReadLock| health::check(nvml, &c).json_reply());
 
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
     let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
@@ -256,7 +254,7 @@ async fn energy_oneshot(
 
     tokio::time::sleep(duration).await;
 
-    base.measurement().map(|v| json(&v)).replyify()
+    base.measurement().json_reply()
 }
 
 type Campaigns = sync::RwLock<BaseMeasurements>;
