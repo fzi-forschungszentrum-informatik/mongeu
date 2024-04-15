@@ -16,6 +16,13 @@ pub fn parse_secs(s: &str) -> Result<Duration, ParseIntError> {
     s.parse().map(NonZeroU64::get).map(Duration::from_secs)
 }
 
+/// Parse a base URI
+pub fn parse_base_uri(s: &str) -> anyhow::Result<Uri> {
+    s.parse()
+        .context("Not a valid URI")
+        .and_then(sanitize_base_uri)
+}
+
 /// Serialize a [Duration] as a number of milliseconds
 pub fn serialize_millis<S: Serializer>(
     duration: &Duration,
