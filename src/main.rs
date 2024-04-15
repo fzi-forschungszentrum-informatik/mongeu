@@ -57,6 +57,10 @@ async fn main() -> anyhow::Result<()> {
     } = config;
 
     let base_uri = Arc::new(misc.base_uri);
+    let max_age: warp::http::header::HeaderValue =
+        format!("max-age={}", misc.cache_max_age.as_secs())
+            .try_into()
+            .context("Could not prepare a max-age directive")?;
 
     init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
