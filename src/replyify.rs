@@ -1,7 +1,8 @@
 //! Utilities for making things a [Reply]
 use nvml_wrapper::error::NvmlError;
+use warp::http::header::{HeaderName, HeaderValue};
 use warp::http::StatusCode;
-use warp::reply::{self, Json};
+use warp::reply::{self, Json, WithHeader};
 use warp::Reply;
 
 /// Convenience trait for transforming stuff into a [Reply]
@@ -60,6 +61,16 @@ pub trait ResultExt {
     where
         Self::Value: serde::Serialize,
         Self::Error: Replyify;
+
+    /// Attach a header
+    fn with_header<V>(
+        self,
+        name: HeaderName,
+        value: V,
+    ) -> Result<WithHeader<Self::Value>, Self::Error>
+    where
+        Self::Value: Reply,
+        V: Into<HeaderValue>;
 }
 
 impl<T, E> ResultExt for Result<T, E> {
@@ -72,5 +83,17 @@ impl<T, E> ResultExt for Result<T, E> {
         Self::Error: Replyify,
     {
         self.map(|v| reply::json(&v)).replyify()
+    }
+
+    fn with_header<V>(
+        self,
+        name: HeaderName,
+        value: V,
+    ) -> Result<WithHeader<Self::Value>, Self::Error>
+    where
+        Self::Value: Reply,
+        V: Into<HeaderValue>,
+    {
+        self.map(|r| reply::with_header(r, name, value))
     }
 }
