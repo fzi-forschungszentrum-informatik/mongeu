@@ -30,7 +30,7 @@ impl BaseMeasurements {
             self.next_id = id.wrapping_add(1);
             Ok(id)
         } else {
-            Err(anyhow::anyhow!("Targeted id {id} already taken"))
+            anyhow::bail!("Targeted id {id} already taken")
         }
     }
 
