@@ -15,6 +15,7 @@ const DEFAULT_LISTEN_ADDRS: [ListenAddr; 2] = [
 ];
 const DEFAULT_LISTEN_PORT: u16 = 80;
 
+const DEFAULT_ONESHOT_ENABLE: bool = false;
 const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
 
 const DEFAULT_GC_MIN_AGE: Duration = Duration::from_secs(24 * 60 * 60);
@@ -140,6 +141,10 @@ impl std::str::FromStr for ListenAddr {
 #[derive(Copy, Clone, Args, Deserialize)]
 #[serde(default)]
 pub struct Oneshot {
+    /// Enable potentially blocking oneshot end-points
+    #[arg(long = "enable-oneshot")]
+    pub enable: bool,
+
     /// Default duration for oneshot measurements
     #[arg(long = "oneshot-duration", value_name("MILLIS"), value_parser = util::parse_millis)]
     #[serde(deserialize_with = "util::deserialize_millis")]
@@ -149,6 +154,7 @@ pub struct Oneshot {
 impl Default for Oneshot {
     fn default() -> Self {
         Self {
+            enable: DEFAULT_ONESHOT_ENABLE,
             duration: DEFAULT_ONESHOT_DURATION,
         }
     }

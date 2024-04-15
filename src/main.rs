@@ -90,6 +90,11 @@ async fn main() -> anyhow::Result<()> {
     let campaigns_read = warp::any().then(|| campaigns.read());
     let campaigns_write = warp::any().then(|| campaigns.write());
 
+    let oneshot_enabled = {
+        let enabled = oneshot.enable;
+        move || std::future::ready(enabled.then_some(()).ok_or_else(warp::reject::not_found))
+    };
+
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
         .and(warp::path("device_count"))
@@ -115,13 +120,18 @@ async fn main() -> anyhow::Result<()> {
     let device = warp::path("device").and(device_info);
 
     // End-point for performing a one-shot measurement of energy consumption
-    let energy_oneshot = warp::get().and(warp::path::end()).and(warp::query()).then({
-        let default_duration = oneshot.duration;
-        move |d: param::Duration| {
-            let duration = d.duration.unwrap_or(default_duration);
-            energy_oneshot(nvml, duration)
-        }
-    });
+    let energy_oneshot = warp::get()
+        .and_then(oneshot_enabled)
+        .untuple_one()
+        .and(warp::path::end())
+        .and(warp::query())
+        .then({
+            let default_duration = oneshot.duration;
+            move |d: param::Duration| {
+                let duration = d.duration.unwrap_or(default_duration);
+                energy_oneshot(nvml, duration)
+            }
+        });
 
     // End-point for creating a new measurement campaign
     let energy_create = warp::post()

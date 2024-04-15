@@ -18,6 +18,7 @@ The following command line options are recognized:
 * `--base-uri <URI>`: specifies an URI under which the API is served. The base
   URI will be used when constructing redirects. This is only relevant if the
   service is placed behind a reverse proxy.
+* `--enable-oneshot`: enable one-shot (single-request) measurements.
 * `--oneshot-duration <MILLISECS>`: specifies a default duration for one-shot
   measurements in `ms`.
 * `--gc-min-age <SECONDS>`: age at which campaigns might be collected in `s`.
@@ -50,6 +51,7 @@ file. The following items are recognized:
     given entry. Defaults to `80`.
 * `[oneshot]`: (optional) section defining configuration of one-shot
   (single-request) endpoints, containing:
+  * `enable`: (optional) enable one-shot measurements. Defaults to `false`.
   * `duration`: (optional) default duration for one-shot measurements (in `ms`).
     Defaults to `500`.
 * `[gc]`: (optional) section configuring garbage collection, containing:
