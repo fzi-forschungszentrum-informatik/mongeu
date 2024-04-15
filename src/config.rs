@@ -28,8 +28,7 @@ pub struct Config {
     pub network: Network,
     pub oneshot: Oneshot,
     pub gc: GC,
-    #[serde(deserialize_with = "util::deserialize_base_uri")]
-    pub base_uri: Uri,
+    pub misc: Misc,
 }
 
 impl Config {
@@ -51,10 +50,8 @@ impl Args for Config {
         let cmd = Network::augment_args_for_update(cmd);
         let cmd = Oneshot::augment_args_for_update(cmd);
         let cmd = GC::augment_args_for_update(cmd);
-        cmd.arg(
-            clap::arg!(base_uri: --"base-uri" <URI> "Base URI under which the API is hosted")
-                .value_parser(util::parse_base_uri),
-        )
+        let cmd = Misc::augment_args_for_update(cmd);
+        cmd
     }
 }
 
@@ -72,9 +69,7 @@ impl clap::FromArgMatches for Config {
         self.network.update_from_arg_matches(matches)?;
         self.oneshot.update_from_arg_matches(matches)?;
         self.gc.update_from_arg_matches(matches)?;
-        if let Some(uri) = matches.get_one::<Uri>("base_uri") {
-            self.base_uri = uri.clone();
-        }
+        self.misc.update_from_arg_matches(matches)?;
         Ok(())
     }
 }
@@ -245,7 +240,7 @@ mod tests {
             network,
             oneshot,
             gc,
-            base_uri,
+            misc,
         } = toml::from_str(include_str!("../example_config.toml")).expect("Could not parse TOML");
 
         assert_eq!(network.port, 80);
@@ -257,13 +252,13 @@ mod tests {
         assert_eq!(gc.min_age, Duration::from_secs(12 * 60 * 60));
         assert_eq!(gc.min_campaigns.get(), 100);
 
-        assert_eq!(base_uri, "/gms/");
+        assert_eq!(misc.base_uri, "/gms/");
     }
 
     #[test]
     fn sane_default_uri() {
-        let config: Config = Default::default();
-        assert_eq!(config.base_uri.query(), None);
-        assert_eq!(config.base_uri.path(), "/");
+        let misc: Misc = Default::default();
+        assert_eq!(misc.base_uri.query(), None);
+        assert_eq!(misc.base_uri.path(), "/");
     }
 }

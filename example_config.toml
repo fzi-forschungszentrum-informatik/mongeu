@@ -1,5 +1,3 @@
-base_uri = "/gms"
-
 [network]
 port = 80
 
@@ -13,3 +11,6 @@ duration = 200
 [gc]
 min_age = 43200
 min_campaigns = 100
+
+[misc]
+base_uri = "/gms"
