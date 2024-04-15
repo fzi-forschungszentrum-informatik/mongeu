@@ -57,6 +57,10 @@ async fn main() -> anyhow::Result<()> {
     } = config;
 
     let base_uri = Arc::new(misc.base_uri);
+    let max_age: warp::http::header::HeaderValue =
+        format!("max-age={}", misc.cache_max_age.as_secs())
+            .try_into()
+            .context("Could not prepare a max-age directive")?;
 
     init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
@@ -89,20 +93,26 @@ async fn main() -> anyhow::Result<()> {
     let device_count = warp::get()
         .and(warp::path("device_count"))
         .and(warp::path::end())
-        .map(|| nvml.device_count().json_reply());
+        .map({
+            let max_age = max_age.clone();
+            move || nvml.device_count().json_reply().cache_control(&max_age)
+        });
 
     // End-points exposing various device info
     let device_info = warp::get()
         .and(device)
         .and(warp::path::param())
         .and(warp::path::end())
-        .map(|d: nvml::Device, p: param::DeviceProperty| {
-            use param::DeviceProperty as DP;
-            match p {
-                DP::Name => d.name().json_reply(),
-                DP::Uuid => d.uuid().json_reply(),
-                DP::Serial => d.serial().json_reply(),
-                DP::PowerUsage => d.power_usage().json_reply(),
+        .map({
+            let max_age = max_age.clone();
+            move |d: nvml::Device, p: param::DeviceProperty| {
+                use param::DeviceProperty as DP;
+                match p {
+                    DP::Name => d.name().json_reply().cache_control(&max_age),
+                    DP::Uuid => d.uuid().json_reply().cache_control(&max_age),
+                    DP::Serial => d.serial().json_reply().cache_control(&max_age),
+                    DP::PowerUsage => d.power_usage().json_reply().no_cache(),
+                }
             }
         });
 
@@ -159,7 +169,7 @@ async fn main() -> anyhow::Result<()> {
     let energy_measure = warp::get()
         .and(campaign_param)
         .and(warp::path::end())
-        .map(|b: CampaignReadLock| b.measurement().json_reply());
+        .map(|b: CampaignReadLock| b.measurement().json_reply().no_cache());
 
     let energy = energy_oneshot
         .or(energy_create)
@@ -171,14 +181,20 @@ async fn main() -> anyhow::Result<()> {
     let ping = warp::get()
         .and(warp::path("ping"))
         .and(warp::path::end())
-        .map(|| warp::http::StatusCode::OK);
+        .map(|| {
+            warp::reply::with_header(
+                warp::http::StatusCode::OK,
+                warp::http::header::CACHE_CONTROL,
+                replyify::NO_CACHE,
+            )
+        });
 
     // End-point for performing a healtch check
     let health = warp::get()
         .and(warp::path("health"))
         .and(warp::path::end())
         .and(campaigns_read)
-        .map(|c: CampaignsReadLock| health::check(nvml, &c).json_reply());
+        .map(|c: CampaignsReadLock| health::check(nvml, &c).json_reply().no_cache());
 
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
     let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
@@ -245,7 +261,7 @@ async fn energy_oneshot(
 
     tokio::time::sleep(duration).await;
 
-    base.measurement().json_reply()
+    base.measurement().json_reply().no_cache()
 }
 
 type Campaigns = sync::RwLock<BaseMeasurements>;

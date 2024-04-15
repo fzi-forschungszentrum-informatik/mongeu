@@ -1,8 +1,12 @@
 //! Utilities for making things a [Reply]
 use nvml_wrapper::error::NvmlError;
+use warp::http::header::{self, HeaderName, HeaderValue};
 use warp::http::StatusCode;
-use warp::reply::{self, Json};
+use warp::reply::{self, Json, WithHeader};
 use warp::Reply;
+
+/// `Cache-control` `no-cache` directive
+pub const NO_CACHE: HeaderValue = HeaderValue::from_static("no-cache");
 
 /// Convenience trait for transforming stuff into a [Reply]
 pub trait Replyify {
@@ -48,7 +52,7 @@ impl Replyify for anyhow::Error {
 }
 
 /// Convenience trait for [Replyify]ing a [Result] in specific ways
-pub trait ResultExt {
+pub trait ResultExt: Sized {
     /// Type encapsulated in [Result::Ok]
     type Value;
 
@@ -60,6 +64,35 @@ pub trait ResultExt {
     where
         Self::Value: serde::Serialize,
         Self::Error: Replyify;
+
+    /// Attach a `Cache-control` no-cache
+    fn no_cache(self) -> Result<WithHeader<Self::Value>, Self::Error>
+    where
+        Self::Value: Reply,
+    {
+        self.cache_control(NO_CACHE)
+    }
+
+    /// Attach a `Cache-control` directive
+    fn cache_control(
+        self,
+        directive: impl Into<HeaderValue>,
+    ) -> Result<WithHeader<Self::Value>, Self::Error>
+    where
+        Self::Value: Reply,
+    {
+        self.with_header(header::CACHE_CONTROL, directive)
+    }
+
+    /// Attach a header
+    fn with_header<V>(
+        self,
+        name: HeaderName,
+        value: V,
+    ) -> Result<WithHeader<Self::Value>, Self::Error>
+    where
+        Self::Value: Reply,
+        V: Into<HeaderValue>;
 }
 
 impl<T, E> ResultExt for Result<T, E> {
@@ -72,5 +105,17 @@ impl<T, E> ResultExt for Result<T, E> {
         Self::Error: Replyify,
     {
         self.map(|v| reply::json(&v)).replyify()
+    }
+
+    fn with_header<V>(
+        self,
+        name: HeaderName,
+        value: V,
+    ) -> Result<WithHeader<Self::Value>, Self::Error>
+    where
+        Self::Value: Reply,
+        V: Into<HeaderValue>,
+    {
+        self.map(|r| reply::with_header(r, name, value))
     }
 }
