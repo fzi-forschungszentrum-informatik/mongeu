@@ -49,7 +49,7 @@ impl Replyify for anyhow::Error {
 }
 
 /// Convenience trait for [Replyify]ing a [Result] in specific ways
-pub trait ResultExt {
+pub trait ResultExt: Sized {
     /// Type encapsulated in [Result::Ok]
     type Value;
 
