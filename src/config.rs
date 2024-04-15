@@ -53,7 +53,7 @@ impl Args for Config {
         let cmd = GC::augment_args_for_update(cmd);
         cmd.arg(
             clap::arg!(base_uri: --"base-uri" <URI> "Base URI under which the API is hosted")
-                .value_parser(clap::value_parser!(Uri)),
+                .value_parser(util::parse_base_uri),
         )
     }
 }
