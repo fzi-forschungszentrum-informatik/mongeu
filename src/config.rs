@@ -183,6 +183,24 @@ impl Default for GC {
     }
 }
 
+/// Miscelleneous configuration
+#[derive(Clone, Args, Deserialize)]
+#[serde(default)]
+pub struct Misc {
+    /// Base URI under which the API is hosted
+    #[arg(long = "base-uri", value_name("URI"), value_parser = util::parse_base_uri)]
+    #[serde(deserialize_with = "util::deserialize_base_uri")]
+    pub base_uri: Uri,
+}
+
+impl Default for Misc {
+    fn default() -> Self {
+        Self {
+            base_uri: Default::default(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
