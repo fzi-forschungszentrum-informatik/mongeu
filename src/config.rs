@@ -28,7 +28,7 @@ pub struct Config {
     pub network: Network,
     pub oneshot: Oneshot,
     pub gc: GC,
-    #[serde(deserialize_with = "util::deserialize_uri")]
+    #[serde(deserialize_with = "util::deserialize_base_uri")]
     pub base_uri: Uri,
 }
 
@@ -239,6 +239,6 @@ mod tests {
         assert_eq!(gc.min_age, Duration::from_secs(12 * 60 * 60));
         assert_eq!(gc.min_campaigns.get(), 100);
 
-        assert_eq!(base_uri, "/gms");
+        assert_eq!(base_uri, "/gms/");
     }
 }

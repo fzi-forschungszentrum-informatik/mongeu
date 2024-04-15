@@ -48,13 +48,13 @@ pub fn deserialize_secs<'d, D: Deserializer<'d>>(deserializer: D) -> Result<Dura
 }
 
 /// Deserialize an [warp::http::Uri]
-pub fn deserialize_uri<'d, D: Deserializer<'d>>(
-    deserializer: D,
-) -> Result<warp::http::Uri, D::Error> {
+pub fn deserialize_base_uri<'d, D: Deserializer<'d>>(deserializer: D) -> Result<Uri, D::Error> {
     use serde::de::Error;
 
     String::deserialize(deserializer)?
         .try_into()
+        .context("Not a valid URI")
+        .and_then(sanitize_base_uri)
         .map_err(D::Error::custom)
 }
 
