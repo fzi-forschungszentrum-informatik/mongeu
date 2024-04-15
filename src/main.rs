@@ -147,7 +147,7 @@ async fn main() -> anyhow::Result<()> {
                     .try_into()
                     .context("Could not create URI for new measurement campaign {i}")
                     .map(|t: warp::http::Uri| warp::redirect::see_other(t))
-                    .map_err(Replyify::replyify)
+                    .replyify()
             }
         });
 
