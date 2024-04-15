@@ -65,6 +65,14 @@ pub trait ResultExt: Sized {
         Self::Value: serde::Serialize,
         Self::Error: Replyify;
 
+    /// Attach a `Cache-control` no-cache
+    fn no_cache(self) -> Result<WithHeader<Self::Value>, Self::Error>
+    where
+        Self::Value: Reply,
+    {
+        self.cache_control(NO_CACHE)
+    }
+
     /// Attach a `Cache-control` directive
     fn cache_control(
         self,
