@@ -28,7 +28,7 @@ pub struct Config {
     pub network: Network,
     pub oneshot: Oneshot,
     pub gc: GC,
-    #[serde(deserialize_with = "util::deserialize_uri")]
+    #[serde(deserialize_with = "util::deserialize_base_uri")]
     pub base_uri: Uri,
 }
 
@@ -53,7 +53,7 @@ impl Args for Config {
         let cmd = GC::augment_args_for_update(cmd);
         cmd.arg(
             clap::arg!(base_uri: --"base-uri" <URI> "Base URI under which the API is hosted")
-                .value_parser(clap::value_parser!(Uri)),
+                .value_parser(util::parse_base_uri),
         )
     }
 }
@@ -239,6 +239,13 @@ mod tests {
         assert_eq!(gc.min_age, Duration::from_secs(12 * 60 * 60));
         assert_eq!(gc.min_campaigns.get(), 100);
 
-        assert_eq!(base_uri, "/gms");
+        assert_eq!(base_uri, "/gms/");
+    }
+
+    #[test]
+    fn sane_default_uri() {
+        let config: Config = Default::default();
+        assert_eq!(config.base_uri.query(), None);
+        assert_eq!(config.base_uri.path(), "/");
     }
 }

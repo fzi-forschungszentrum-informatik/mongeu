@@ -54,18 +54,9 @@ async fn main() -> anyhow::Result<()> {
         network,
         oneshot,
         gc,
-        mut base_uri,
+        base_uri,
     } = config;
 
-    anyhow::ensure!(
-        base_uri.query().is_none(),
-        "Base URI '{base_uri}' has query!",
-    );
-    if !base_uri.path().ends_with('/') {
-        base_uri = format!("{base_uri}/")
-            .try_into()
-            .context("Could not sanitize base URI")?;
-    }
     let base_uri = Arc::new(base_uri);
 
     init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())

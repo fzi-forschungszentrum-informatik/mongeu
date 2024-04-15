@@ -2,7 +2,9 @@
 use std::num::{NonZeroU64, ParseIntError};
 use std::time::Duration;
 
+use anyhow::Context;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use warp::http::Uri;
 
 /// Parse a non-zero [Duration] provided in milliseconds
 pub fn parse_millis(s: &str) -> Result<Duration, ParseIntError> {
@@ -12,6 +14,13 @@ pub fn parse_millis(s: &str) -> Result<Duration, ParseIntError> {
 /// Parse a non-zero [Duration] provided in seconds
 pub fn parse_secs(s: &str) -> Result<Duration, ParseIntError> {
     s.parse().map(NonZeroU64::get).map(Duration::from_secs)
+}
+
+/// Parse a base URI
+pub fn parse_base_uri(s: &str) -> anyhow::Result<Uri> {
+    s.parse()
+        .context("Not a valid URI")
+        .and_then(sanitize_base_uri)
 }
 
 /// Serialize a [Duration] as a number of milliseconds
@@ -46,14 +55,27 @@ pub fn deserialize_secs<'d, D: Deserializer<'d>>(deserializer: D) -> Result<Dura
 }
 
 /// Deserialize an [warp::http::Uri]
-pub fn deserialize_uri<'d, D: Deserializer<'d>>(
-    deserializer: D,
-) -> Result<warp::http::Uri, D::Error> {
+pub fn deserialize_base_uri<'d, D: Deserializer<'d>>(deserializer: D) -> Result<Uri, D::Error> {
     use serde::de::Error;
 
     String::deserialize(deserializer)?
         .try_into()
+        .context("Not a valid URI")
+        .and_then(sanitize_base_uri)
         .map_err(D::Error::custom)
+}
+
+/// Sanitize the given URI, making it usable as a base URI
+fn sanitize_base_uri(uri: Uri) -> anyhow::Result<Uri> {
+    anyhow::ensure!(uri.query().is_none(), "Base URI '{uri}' has query!",);
+
+    if !uri.path().ends_with('/') {
+        format!("{uri}/")
+            .try_into()
+            .context("Could not sanitize base URI")
+    } else {
+        Ok(uri)
+    }
 }
 
 /// Rejection for failure to retrieve an [nvml_wrapper::Device]
