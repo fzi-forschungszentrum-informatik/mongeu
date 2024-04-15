@@ -1,6 +1,6 @@
 //! Utilities for making things a [Reply]
 use nvml_wrapper::error::NvmlError;
-use warp::http::header::{HeaderName, HeaderValue};
+use warp::http::header::{self, HeaderName, HeaderValue};
 use warp::http::StatusCode;
 use warp::reply::{self, Json, WithHeader};
 use warp::Reply;
@@ -61,6 +61,17 @@ pub trait ResultExt: Sized {
     where
         Self::Value: serde::Serialize,
         Self::Error: Replyify;
+
+    /// Attach a `Cache-control` directive
+    fn cache_control(
+        self,
+        directive: impl Into<HeaderValue>,
+    ) -> Result<WithHeader<Self::Value>, Self::Error>
+    where
+        Self::Value: Reply,
+    {
+        self.with_header(header::CACHE_CONTROL, directive)
+    }
 
     /// Attach a header
     fn with_header<V>(
