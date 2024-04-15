@@ -5,6 +5,9 @@ use warp::http::StatusCode;
 use warp::reply::{self, Json, WithHeader};
 use warp::Reply;
 
+/// `Cache-control` `no-cache` directive
+pub const NO_CACHE: HeaderValue = HeaderValue::from_static("no-cache");
+
 /// Convenience trait for transforming stuff into a [Reply]
 pub trait Replyify {
     /// Type of the reply [Self::replyify] is transforming [Self] into
