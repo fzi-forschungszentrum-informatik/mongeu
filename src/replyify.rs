@@ -1,6 +1,7 @@
 //! Utilities for making things a [Reply]
 use nvml_wrapper::error::NvmlError;
 use warp::http::StatusCode;
+use warp::reply::{self, Json};
 use warp::Reply;
 
 /// Convenience trait for transforming stuff into a [Reply]
@@ -43,5 +44,33 @@ impl Replyify for anyhow::Error {
     fn replyify(self) -> Self::Reply {
         log::warn!("Encountered error: {self:#}");
         warp::reply::with_status(self.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+    }
+}
+
+/// Convenience trait for [Replyify]ing a [Result] in specific ways
+pub trait ResultExt {
+    /// Type encapsulated in [Result::Ok]
+    type Value;
+
+    /// Type encapsulated in [Result::Err]
+    type Error;
+
+    /// Replyify this by transforming [Result::Ok] into JSON
+    fn json_reply(self) -> Result<Json, <Self::Error as Replyify>::Reply>
+    where
+        Self::Value: serde::Serialize,
+        Self::Error: Replyify;
+}
+
+impl<T, E> ResultExt for Result<T, E> {
+    type Value = T;
+    type Error = E;
+
+    fn json_reply(self) -> Result<Json, <Self::Error as Replyify>::Reply>
+    where
+        Self::Value: serde::Serialize,
+        Self::Error: Replyify,
+    {
+        self.map(|v| reply::json(&v)).replyify()
     }
 }
