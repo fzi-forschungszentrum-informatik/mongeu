@@ -21,6 +21,8 @@ const DEFAULT_ONESHOT_DURATION: Duration = Duration::from_millis(500);
 const DEFAULT_GC_MIN_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 const DEFAULT_GC_MIN_CAMPAIGNS: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1 << 16) };
 
+const DEFAULT_CACHE_MAX_AGE: Duration = Duration::from_secs(15 * 60);
+
 /// General configuration
 #[derive(Default, Deserialize)]
 #[serde(default)]
@@ -186,12 +188,18 @@ pub struct Misc {
     #[arg(long = "base-uri", value_name("URI"), value_parser = util::parse_base_uri)]
     #[serde(deserialize_with = "util::deserialize_base_uri")]
     pub base_uri: Uri,
+
+    /// Max-age to communicate for non-ephemeral values in Cache-control
+    #[arg(long = "cache-max-age", value_name("SECONDS"), value_parser = util::parse_secs)]
+    #[serde(deserialize_with = "util::deserialize_secs")]
+    pub cache_max_age: Duration,
 }
 
 impl Default for Misc {
     fn default() -> Self {
         Self {
             base_uri: Default::default(),
+            cache_max_age: DEFAULT_CACHE_MAX_AGE,
         }
     }
 }
