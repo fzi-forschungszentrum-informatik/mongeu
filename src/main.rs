@@ -53,10 +53,10 @@ async fn main() -> anyhow::Result<()> {
         network,
         oneshot,
         gc,
-        base_uri,
+        misc,
     } = config;
 
-    let base_uri = Arc::new(base_uri);
+    let base_uri = Arc::new(misc.base_uri);
 
     init_logger(LevelFilter::Warn, matches.get_count("verbosity").into())
         .context("Could not initialize logger")?;
