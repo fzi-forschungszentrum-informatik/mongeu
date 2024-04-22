@@ -146,7 +146,7 @@ paths:
 components:
   responses:
     measurement:
-      description: The duration in ms and devices' energy consumptions in mW
+      description: The duration in ms and devices' energy consumptions in mJ
       content:
         application/json:
           schema:
