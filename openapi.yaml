@@ -4,7 +4,7 @@ info:
   summary: API for measuring energy consumption of GPUs
   version: 1.0.0
 paths:
-  /device_count:
+  /v1/device_count:
     get:
       summary: Retrieve the number of devices
       responses:
@@ -16,7 +16,7 @@ paths:
                 type: integer
         default:
           $ref: '#/components/responses/error'
-  /device/{id}/name:
+  /v1/device/{id}/name:
     get:
       summary: Retrieve the name of a device
       responses:
@@ -30,7 +30,7 @@ paths:
           $ref: '#/components/responses/error'
       parameters:
       - $ref: '#/components/parameters/device_id'
-  /device/{id}/uuid:
+  /v1/device/{id}/uuid:
     get:
       summary: Retrieve the UUID of a device
       responses:
@@ -44,7 +44,7 @@ paths:
           $ref: '#/components/responses/error'
       parameters:
       - $ref: '#/components/parameters/device_id'
-  /device/{id}/serial:
+  /v1/device/{id}/serial:
     get:
       summary: Retrieve the serial of a device
       responses:
@@ -58,7 +58,7 @@ paths:
           $ref: '#/components/responses/error'
       parameters:
       - $ref: '#/components/parameters/device_id'
-  /device/{id}/power_usage:
+  /v1/device/{id}/power_usage:
     get:
       summary: Retrieve the current power usage of a device
       responses:
@@ -72,7 +72,7 @@ paths:
           $ref: '#/components/responses/error'
       parameters:
       - $ref: '#/components/parameters/device_id'
-  /energy:
+  /v1/energy:
     get:
       summary: Perform a oneshot measurement of energy consumption
       responses:
@@ -93,7 +93,7 @@ paths:
           description: Redirect to the new campaign
         default:
           $ref: '#/components/responses/error'
-  /energy/{campaign}:
+  /v1/energy/{campaign}:
     get:
       summary: Get a new measurement for the campaign
       responses:
@@ -114,13 +114,13 @@ paths:
           $ref: '#/components/responses/error'
       parameters:
       - $ref: '#/components/parameters/campaign_id'
-  /ping:
+  /v1/ping:
     get:
       summary: Simple ping endpoint
       responses:
         '200':
           description: Empty ping response
-  /health:
+  /v1/health:
     get:
       summary: Perform a health-check
       responses:
