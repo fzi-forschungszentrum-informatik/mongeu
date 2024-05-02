@@ -38,7 +38,8 @@ impl Config {
     pub fn from_toml_file(path: impl AsRef<std::path::Path>) -> anyhow::Result<Self> {
         use anyhow::Context;
 
-        let toml = std::fs::read_to_string(path).context("Could not read file {path}")?;
+        let toml = std::fs::read_to_string(path.as_ref())
+            .with_context(|| format!("Could not read file {}", path.as_ref().display()))?;
         toml::from_str(toml.as_ref()).context("Could not parse TOML")
     }
 }
