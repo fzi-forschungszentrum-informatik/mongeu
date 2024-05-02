@@ -35,6 +35,10 @@ The following command line options are recognized:
 
 Note that, currently, deamonization is not supported.
 
+If no config file is provided via the `-c`/`--config` command line option,
+`mongeu` will try to retrieve configuration from `/etc/mongeu.toml` if such a
+file exists.
+
 ## Config file format
 
 The configuration may be supplied via the `-c` option in the form of a TOML

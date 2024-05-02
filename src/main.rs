@@ -23,6 +23,7 @@ mod util;
 use energy::BaseMeasurements;
 use replyify::{Replyify, ResultExt};
 
+const DEFAULT_CONFIG_PATH: &str = "/etc/mongeu.toml";
 const MIN_GC_TICK: Duration = Duration::from_secs(60);
 
 #[tokio::main(flavor = "current_thread")]
@@ -43,6 +44,16 @@ async fn main() -> anyhow::Result<()> {
     let mut config = matches
         .get_one::<std::path::PathBuf>("config")
         .map(config::Config::from_toml_file)
+        .or_else(|| match std::fs::read_to_string(DEFAULT_CONFIG_PATH) {
+            // If there is a config in the default location we take it, but
+            // there not being one isn't an error.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+            r => Some(
+                r.map_err(Into::into)
+                    .and_then(config::Config::from_toml)
+                    .with_context(|| format!("Could not read config from {DEFAULT_CONFIG_PATH}")),
+            ),
+        })
         .transpose()
         .context("Could not read config file")?
         .unwrap_or_default();
