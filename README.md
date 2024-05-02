@@ -10,7 +10,7 @@ The API is [documented](./openapi.yaml) in the OpenAPI 3.1 format.
 
 The following command line options are recognized:
 * `-l --listen <ADDR>`: address to listen on for connections. Currently, the
-  address must be specified as a numeric IPv4- or IPv4-address. Multiple
+  address must be specified as a numeric IPv4- or IPv6-address. Multiple
   addresses may be specified. By default, the service accepts connections via
   all IPv4 and IPv6 addresses.
 * `-p --port <PORT>`: port to listen on for connections. By default, the service
