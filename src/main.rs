@@ -250,7 +250,7 @@ async fn incoming_from(
         log::trace!("Binding to address {addr}");
         let listener = TcpListener::bind(addr)
             .await
-            .context("Could not bind to address '{addr}'")?;
+            .with_context(|| format!("Could not bind to address '{addr}'"))?;
         let listener = Arc::new(listener);
         let tcp_streams = stream::repeat(()).then(move |_| do_accept(listener.clone()));
         incoming.push(Box::pin(tcp_streams));
