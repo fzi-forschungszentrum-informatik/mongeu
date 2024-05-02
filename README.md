@@ -1,4 +1,4 @@
-# mongeu -- MONitor for GPU energy Usage
+# mongeu -- MONitor for GPU Energy Usage
 
 This program provides a RESTful API via HTTP for measuring the energy
 consumption of GPUs and retrieving additional information. Currently, only
