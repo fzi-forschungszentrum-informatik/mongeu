@@ -1,5 +1,6 @@
 [package]
-name = "gpu-messurement-service"
+name = "mongeu"
+description = "MONitor for GPU Energy Usage"
 version = "0.1.0"
 edition = "2021"
 
