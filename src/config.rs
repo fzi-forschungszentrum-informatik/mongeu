@@ -9,10 +9,8 @@ use warp::http::Uri;
 
 use crate::util;
 
-const DEFAULT_LISTEN_ADDRS: [ListenAddr; 2] = [
-    ListenAddr::new(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED)),
-    ListenAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED)),
-];
+const DEFAULT_LISTEN_ADDRS: [ListenAddr; 1] =
+    [ListenAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED))];
 const DEFAULT_LISTEN_PORT: u16 = 80;
 
 const DEFAULT_ONESHOT_ENABLE: bool = false;

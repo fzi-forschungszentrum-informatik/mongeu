@@ -12,7 +12,8 @@ The following command line options are recognized:
 * `-l --listen <ADDR>`: address to listen on for connections. Currently, the
   address must be specified as a numeric IPv4- or IPv6-address. Multiple
   addresses may be specified. By default, the service accepts connections via
-  all IPv4 and IPv6 addresses.
+  IPv6 addresses. Depending on the default `IPV6_V6ONLY` socket option of the
+  system, it will also accept connections via IPv4.
 * `-p --port <PORT>`: port to listen on for connections. By default, the service
   listens on port 80.
 * `--base-uri <URI>`: specifies an URI under which the API is served. The base
