@@ -141,6 +141,8 @@ paths:
                     type: string
                   campaigns:
                     type: integer
+                  oneshot_enabled:
+                    type: boolean
         default:
           $ref: '#/components/responses/error'
 components:

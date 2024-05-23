@@ -12,10 +12,15 @@ pub struct Health {
     driver_version: String,
     nvml_version: String,
     campaigns: usize,
+    oneshot_enabled: bool,
 }
 
 /// Perform a health check
-pub fn check(nvml: &nvml_wrapper::Nvml, campaigns: &BaseMeasurements) -> Result<Health> {
+pub fn check(
+    nvml: &nvml_wrapper::Nvml,
+    campaigns: &BaseMeasurements,
+    oneshot_enabled: bool,
+) -> Result<Health> {
     let device_count = nvml
         .device_count()
         .context("Could not retrieve device count")?;
@@ -33,5 +38,6 @@ pub fn check(nvml: &nvml_wrapper::Nvml, campaigns: &BaseMeasurements) -> Result<
         driver_version,
         nvml_version,
         campaigns,
+        oneshot_enabled,
     })
 }
