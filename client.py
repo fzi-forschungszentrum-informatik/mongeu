@@ -1,4 +1,7 @@
+#!/bin/env python
+import argparse
 import requests
+import time
 
 class Client:
     """Mongeu API client"""
@@ -64,3 +67,41 @@ class Campaign:
 
     def __del__(self):
         requests.delete(self.url)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Mongeu API client demo')
+    parser.add_argument('url')
+    parser.add_argument('action', choices=['ping', 'health', 'oneshot', 'campaign'])
+    parser.add_argument('--campaign_method', choices=['1','2'], default='1')
+    parser.add_argument('-i', '--interval', type=int, default=500)
+    parser.add_argument('-c', '--count', type=int, default=4)
+    args = parser.parse_args()
+
+    client = Client(args.url)
+
+    if args.action == 'ping':
+        if not client.ping():
+            sys.exit("Could not ping API")
+
+    elif args.action == 'health':
+        print(client.health())
+
+    elif args.action == 'oneshot':
+        measurement = client.oneshot(args.interval)
+        if measurement is None:
+            sys.exit("Could not issue oneshot measurement")
+        print(measurement)
+
+    elif args.action == 'campaign':
+        if args.campaign_method == 1:
+            campaign = client.new_campaign()
+        else:
+            campaign = client.new_campaign2()
+
+        for _ in range(0,args.count):
+            time.sleep(args.interval/1000.0)
+            print(campaign.get())
+        del campaign
+
+    else:
+        sys.exit("Unknown action: " + args.action)
