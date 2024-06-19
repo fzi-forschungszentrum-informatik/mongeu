@@ -240,10 +240,10 @@ mod tests {
         let network: Network = toml::from_str("").expect("Could not parse TOML");
         assert_eq!(network.listen, DEFAULT_LISTEN_ADDRS);
         assert_eq!(network.port, DEFAULT_LISTEN_PORT);
-        let addrs = [
-            SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), DEFAULT_LISTEN_PORT),
-            SocketAddr::new(Ipv6Addr::UNSPECIFIED.into(), DEFAULT_LISTEN_PORT),
-        ];
+        let addrs = [SocketAddr::new(
+            Ipv6Addr::UNSPECIFIED.into(),
+            DEFAULT_LISTEN_PORT,
+        )];
         assert_eq!(network.listen_addrs().collect::<Vec<_>>(), addrs);
     }
 
