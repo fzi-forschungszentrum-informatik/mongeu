@@ -4,7 +4,8 @@ This program provides a RESTful API via HTTP for measuring the energy
 consumption of GPUs and retrieving additional information. Currently, only
 nVidia GPUs are supported (via NVML).
 
-The API is [documented](./openapi.yaml) in the OpenAPI 3.1 format.
+The API is [documented](./openapi.yaml) in the OpenAPI 3.1 format. Possible
+usage patterns are demonstrated by an [example client](./client.py).
 
 ## Usage
 
