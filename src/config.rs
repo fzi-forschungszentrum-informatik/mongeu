@@ -55,11 +55,18 @@ impl Args for Config {
     }
 
     fn augment_args_for_update(cmd: clap::Command) -> clap::Command {
+        let about = cmd
+            .get_about()
+            .cloned()
+            .unwrap_or(clap::crate_description!().into());
+        let long_about = cmd.get_long_about().unwrap_or(&about).clone();
+
         let cmd = Network::augment_args_for_update(cmd);
         let cmd = Oneshot::augment_args_for_update(cmd);
         let cmd = GC::augment_args_for_update(cmd);
         let cmd = Misc::augment_args_for_update(cmd);
-        cmd
+
+        cmd.about(about).long_about(long_about)
     }
 }
 
