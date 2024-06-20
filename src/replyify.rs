@@ -1,3 +1,5 @@
+// Copyright (c) 2024 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 //! Utilities for making things a [Reply]
 use nvml_wrapper::error::NvmlError;
 use warp::http::header::{self, HeaderName, HeaderValue};

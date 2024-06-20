@@ -1,3 +1,5 @@
+// Copyright (c) 2024 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 use std::net;
 use std::num::NonZeroUsize;
 use std::sync::{Arc, OnceLock};
@@ -31,6 +33,12 @@ async fn main() -> anyhow::Result<()> {
     use clap::{Args, FromArgMatches};
 
     let matches = config::Config::augment_args_for_update(clap::command!())
+        .after_long_help(include_str!("../NOTICE"))
+        .long_version(concat!(
+            clap::crate_version!(),
+            "\n\n",
+            include_str!("../NOTICE"),
+        ))
         .arg(
             clap::arg!(config: -c --config <FILE> "Read configuration from a TOML file")
                 .value_parser(clap::value_parser!(std::path::PathBuf)),

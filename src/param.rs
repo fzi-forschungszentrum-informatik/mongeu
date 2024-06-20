@@ -1,3 +1,5 @@
+// Copyright (c) 2024 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 //! Utilities for handling (request) parameters of all kind
 use serde::Deserialize;
 

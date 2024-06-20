@@ -72,3 +72,11 @@ Command line options override values from config files.
 ## Building
 
 This project is built using Cargo, the Rust package manager.
+
+## Acknowledgement
+
+<img src="./images/BMBF_sponsored.jpg" alt="BMBF logo" height="100" align="left">
+
+The development of this software was partially funded by the German Federal
+Ministry of Education and Research (BMBF) within the project GreenEdge-FuE
+(grant number 16ME0517K).

@@ -1,4 +1,6 @@
 #!/bin/env python
+# Copyright (c) 2024 FZI Forschungszentrum Informatik
+# SPDX-License-Identifier: Apache-2.0
 import argparse
 import requests
 import time
