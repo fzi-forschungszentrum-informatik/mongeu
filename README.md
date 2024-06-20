@@ -73,6 +73,14 @@ Command line options override values from config files.
 
 This project is built using Cargo, the Rust package manager.
 
+## Containerized operations
+
+mongeu may be run either directly on a host or in a container, e.g. using an
+image built from [this Dockerfile](./Dockerfile). Note, however, that for
+containerized operations, it is neccessary to expose the GPUs to be monitored
+to the container. This can usually be achieved using the
+[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/).
+
 ## Acknowledgement
 
 <img src="./images/BMBF_sponsored.jpg" alt="BMBF logo" height="100" align="left">
