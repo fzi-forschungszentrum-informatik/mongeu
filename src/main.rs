@@ -1,3 +1,5 @@
+// Copyright (c) 2024 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 use std::net;
 use std::num::NonZeroUsize;
 use std::sync::{Arc, OnceLock};

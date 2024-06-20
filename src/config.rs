@@ -1,3 +1,5 @@
+// Copyright (c) 2024 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 //! Configuration related types and utilities
 use std::net::{IpAddr, SocketAddr};
 use std::num::NonZeroUsize;

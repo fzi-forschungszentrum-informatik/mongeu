@@ -1,3 +1,5 @@
+// Copyright (c) 2024 FZI Forschungszentrum Informatik
+// SPDX-License-Identifier: Apache-2.0
 //! Utilities
 use std::num::{NonZeroU64, ParseIntError};
 use std::time::Duration;
