@@ -5,7 +5,20 @@ consumption of GPUs and retrieving additional information. Currently, only
 NVIDIA GPUs are supported (via NVML).
 
 The API is [documented](./openapi.yaml) in the OpenAPI 3.1 format. Possible
-usage patterns are demonstrated by an [example client](./client.py).
+usage patterns are demonstrated by an [example client](./client.py). The core
+functionality is performing *measurements* within *campaigns*. A new campaing
+is started via a POST to the `/v1/energy` end-point:
+
+    POST /v1/energy
+
+The end-point will respond with a `303 See Other` status and a `Location` header
+containing the URI of the end-point associated to the new campaign.
+
+    HTTP/1.1 303 See Other
+    Location: /v1/energy/0
+
+Subsequent GET requests on that end-point will yield a new measurement relative
+to the instant the campaign was created.
 
 ## Usage
 
