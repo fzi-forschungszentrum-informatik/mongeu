@@ -93,6 +93,15 @@ paths:
   /v1/energy:
     get:
       summary: Perform a oneshot measurement of energy consumption
+      description: |
+        This request will perform a oneshot measurement of the devices' energy
+        consumption over the specified duration (in ms) or, if no duration is
+        specified, a default duration. The request will block for the duration
+        of the measurement.
+
+        This request is not availible unless the service was started with
+        oneshot end-points enabled. Whether or not oneshot end-points are
+        enabled is exposed via the health-check end-point.
       responses:
         '200':
           $ref: '#/components/responses/measurement'
@@ -106,6 +115,9 @@ paths:
           type: integer
     post:
       summary: Create a new measurement campaign
+      description: |
+        This request will create a new measurement campaign and redirect to the
+        new campaign's end-point.
       responses:
         '303':
           description: Redirect to the new campaign
@@ -114,6 +126,9 @@ paths:
   /v1/energy/{campaign}:
     get:
       summary: Get a new measurement for the campaign
+      description: |
+        This request will perform a new measurement relative to the
+        instant in which the campaign was created.
       responses:
         '200':
           $ref: '#/components/responses/measurement'
@@ -123,6 +138,9 @@ paths:
       - $ref: '#/components/parameters/campaign_id'
     delete:
       summary: End a specific campaign
+      description: |
+        This request will end a campaign and free all resources associated with
+        it.
       responses:
         '200':
           description: The campaign ended.
