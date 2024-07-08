@@ -142,6 +142,8 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/measurement'
+        '404':
+          $ref: '#/components/responses/campaign_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -155,7 +157,7 @@ paths:
         '200':
           description: The campaign ended.
         '404':
-          description: A campaign with the provided id does not exist
+          $ref: '#/components/responses/campaign_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -213,6 +215,8 @@ components:
                       type: integer
     device_not_found:
       description: A device with the provided id does not exist.
+    campaign_not_found:
+      description: A campaign with the provided id does not exist.
     error:
       description: Unexpected error
   parameters:
