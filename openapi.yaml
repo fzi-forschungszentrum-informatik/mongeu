@@ -107,7 +107,7 @@ paths:
       summary: End a specific campaign
       responses:
         '200':
-          $ref: '#/components/responses/measurement'
+          description: The campaign ended.
         '404':
           description: A campaign with the provided id does not exist
         default:
