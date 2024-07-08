@@ -21,6 +21,10 @@ paths:
   /v1/device_count:
     get:
       summary: Retrieve the number of devices
+      description: |
+        This request yields with the number of distinct devices (i.e. GPUs)
+        addressable through this service. Devices are enumerated, starting from
+        `0` up to, not including, this value.
       responses:
         '200':
           description: The number of devices
