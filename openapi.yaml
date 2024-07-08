@@ -44,6 +44,8 @@ paths:
             application/json:
               schema:
                 type: string
+        '404':
+          $ref: '#/components/responses/device_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -58,6 +60,8 @@ paths:
             application/json:
               schema:
                 type: string
+        '404':
+          $ref: '#/components/responses/device_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -72,6 +76,8 @@ paths:
             application/json:
               schema:
                 type: string
+        '404':
+          $ref: '#/components/responses/device_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -86,6 +92,8 @@ paths:
             application/json:
               schema:
                 type: integer
+        '404':
+          $ref: '#/components/responses/device_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -201,6 +209,8 @@ components:
                       type: integer
                     energy:
                       type: integer
+    device_not_found:
+      description: A device with the provided id does not exist.
     error:
       description: Unexpected error
   parameters:
