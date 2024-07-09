@@ -3,10 +3,28 @@ info:
   title: GPU measurement service
   summary: API for measuring energy consumption of GPUs
   version: 1.0.0
+  description: |
+    This API allows performing *measurements* within *campaigns*. A new campaing
+    is started via a POST to the `/v1/energy` end-point:
+
+        POST /v1/energy
+
+    The end-point will respond with a `303 See Other` status and a `Location`
+    header containing the URI of the end-point associated to the new campaign.
+
+        HTTP/1.1 303 See Other
+        Location: /v1/energy/0
+
+    Subsequent GET requests on that end-point will yield a new measurement
+    relative to the instant the campaign was created.
 paths:
   /v1/device_count:
     get:
       summary: Retrieve the number of devices
+      description: |
+        This request yields with the number of distinct devices (i.e. GPUs)
+        addressable through this service. Devices are enumerated, starting from
+        `0` up to, not including, this value.
       responses:
         '200':
           description: The number of devices
@@ -26,6 +44,8 @@ paths:
             application/json:
               schema:
                 type: string
+        '404':
+          $ref: '#/components/responses/device_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -40,6 +60,8 @@ paths:
             application/json:
               schema:
                 type: string
+        '404':
+          $ref: '#/components/responses/device_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -54,6 +76,8 @@ paths:
             application/json:
               schema:
                 type: string
+        '404':
+          $ref: '#/components/responses/device_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -68,6 +92,8 @@ paths:
             application/json:
               schema:
                 type: integer
+        '404':
+          $ref: '#/components/responses/device_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -75,9 +101,20 @@ paths:
   /v1/energy:
     get:
       summary: Perform a oneshot measurement of energy consumption
+      description: |
+        This request will perform a oneshot measurement of the devices' energy
+        consumption over the specified duration (in ms) or, if no duration is
+        specified, a default duration. The request will block for the duration
+        of the measurement.
+
+        This request is not availible unless the service was started with
+        oneshot end-points enabled. Whether or not oneshot end-points are
+        enabled is exposed via the health-check end-point.
       responses:
         '200':
           $ref: '#/components/responses/measurement'
+        '404':
+          description: (Blocking) oneshot end-points are not enabled.
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -88,28 +125,45 @@ paths:
           type: integer
     post:
       summary: Create a new measurement campaign
+      description: |
+        This request will create a new measurement campaign and redirect to the
+        new campaign's end-point.
       responses:
         '303':
           description: Redirect to the new campaign
+          headers:
+            Location:
+              description: URI of the new campaign
+              schema:
+                type: string
+              example: /v1/energy/0
         default:
           $ref: '#/components/responses/error'
   /v1/energy/{campaign}:
     get:
       summary: Get a new measurement for the campaign
+      description: |
+        This request will perform a new measurement relative to the
+        instant in which the campaign was created.
       responses:
         '200':
           $ref: '#/components/responses/measurement'
+        '404':
+          $ref: '#/components/responses/campaign_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
       - $ref: '#/components/parameters/campaign_id'
     delete:
       summary: End a specific campaign
+      description: |
+        This request will end a campaign and free all resources associated with
+        it.
       responses:
         '200':
-          $ref: '#/components/responses/measurement'
+          description: The campaign ended.
         '404':
-          description: A campaign with the provided id does not exist
+          $ref: '#/components/responses/campaign_not_found'
         default:
           $ref: '#/components/responses/error'
       parameters:
@@ -165,6 +219,10 @@ components:
                       type: integer
                     energy:
                       type: integer
+    device_not_found:
+      description: A device with the provided id does not exist.
+    campaign_not_found:
+      description: A campaign with the provided id does not exist.
     error:
       description: Unexpected error
   parameters:
