@@ -113,6 +113,8 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/measurement'
+        '404':
+          description: (Blocking) oneshot end-points are not enabled.
         default:
           $ref: '#/components/responses/error'
       parameters:
