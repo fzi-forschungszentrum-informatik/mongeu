@@ -131,6 +131,12 @@ paths:
       responses:
         '303':
           description: Redirect to the new campaign
+          headers:
+            Location:
+              description: URI of the new campaign
+              schema:
+                type: string
+              example: /v1/energy/0
         default:
           $ref: '#/components/responses/error'
   /v1/energy/{campaign}:
