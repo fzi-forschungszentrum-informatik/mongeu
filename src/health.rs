@@ -17,29 +17,52 @@ pub struct Health {
     oneshot_enabled: bool,
 }
 
+/// A health checker
+#[derive(Clone, Debug)]
+pub struct Checker<'a> {
+    nvml: &'a nvml_wrapper::Nvml,
+    oneshot_enabled: bool,
+}
+
+impl<'a> Checker<'a> {
+    /// Create a new health checker
+    pub fn new(nvml: &'a nvml_wrapper::Nvml, oneshot_enabled: bool) -> Result<Self> {
+        Ok(Self {
+            nvml,
+            oneshot_enabled,
+        })
+    }
+
+    /// Perform a health check, producing a [Health] info if healthy
+    pub fn check(&self, campaigns: &BaseMeasurements) -> Result<Health> {
+        let device_count = self
+            .nvml
+            .device_count()
+            .context("Could not retrieve device count")?;
+        let driver_version = self
+            .nvml
+            .sys_driver_version()
+            .context("Could not retrieve driver version")?;
+        let nvml_version = self
+            .nvml
+            .sys_nvml_version()
+            .context("Could not retrieve NVML version")?;
+        Ok(Health {
+            device_count,
+            version: env!("CARGO_PKG_VERSION"),
+            driver_version,
+            nvml_version,
+            campaigns: campaigns.len(),
+            oneshot_enabled: self.oneshot_enabled,
+        })
+    }
+}
+
 /// Perform a health check
 pub fn check(
     nvml: &nvml_wrapper::Nvml,
     campaigns: &BaseMeasurements,
     oneshot_enabled: bool,
 ) -> Result<Health> {
-    let device_count = nvml
-        .device_count()
-        .context("Could not retrieve device count")?;
-    let driver_version = nvml
-        .sys_driver_version()
-        .context("Could not retrieve driver version")?;
-    let nvml_version = nvml
-        .sys_nvml_version()
-        .context("Could not retrieve NVML version")?;
-    let version = env!("CARGO_PKG_VERSION");
-    let campaigns = campaigns.len();
-    Ok(Health {
-        device_count,
-        version,
-        driver_version,
-        nvml_version,
-        campaigns,
-        oneshot_enabled,
-    })
+    Checker::new(nvml, oneshot_enabled)?.check(campaigns)
 }
