@@ -6,6 +6,7 @@ RUN apt update && apt install -y cargo && rm -rf /var/lib/apt/lists/* && mkdir /
 
 COPY Cargo.toml /build/Cargo.toml
 COPY src /build/src/
+COPY NOTICE /build/NOTICE
 RUN cargo install --root / --path /build
 
 # Runtime
