@@ -57,12 +57,3 @@ impl<'a> Checker<'a> {
         })
     }
 }
-
-/// Perform a health check
-pub fn check(
-    nvml: &nvml_wrapper::Nvml,
-    campaigns: &BaseMeasurements,
-    oneshot_enabled: bool,
-) -> Result<Health> {
-    Checker::new(nvml, oneshot_enabled)?.check(campaigns)
-}
