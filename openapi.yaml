@@ -187,6 +187,10 @@ paths:
                 properties:
                   device_count:
                     type: integer
+                  device_names:
+                    type: array
+                    items:
+                      type: string
                   version:
                     type: string
                   driver_version:

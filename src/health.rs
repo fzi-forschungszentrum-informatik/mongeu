@@ -10,6 +10,7 @@ use crate::energy::BaseMeasurements;
 #[derive(Debug, serde::Serialize)]
 pub struct Health {
     device_count: u32,
+    device_names: Vec<String>,
     version: &'static str,
     driver_version: String,
     nvml_version: String,
@@ -39,6 +40,15 @@ impl<'a> Checker<'a> {
             .nvml
             .device_count()
             .context("Could not retrieve device count")?;
+        let device_names = (0..device_count)
+            .map(|i| {
+                self.nvml
+                    .device_by_index(i)
+                    .with_context(|| format!("Could not retrieve device {i}"))?
+                    .name()
+                    .with_context(|| format!("Could not retrieve name of device {i}"))
+            })
+            .collect::<Result<_>>()?;
         let driver_version = self
             .nvml
             .sys_driver_version()
@@ -49,6 +59,7 @@ impl<'a> Checker<'a> {
             .context("Could not retrieve NVML version")?;
         Ok(Health {
             device_count,
+            device_names,
             version: env!("CARGO_PKG_VERSION"),
             driver_version,
             nvml_version,
