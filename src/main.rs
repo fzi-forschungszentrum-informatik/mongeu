@@ -108,6 +108,9 @@ async fn main() -> anyhow::Result<()> {
         move || std::future::ready(enabled.then_some(()).ok_or_else(warp::reject::not_found))
     };
 
+    let checker =
+        health::Checker::new(nvml, oneshot.enable).context("Could not set up helath checker")?;
+
     // End-point exposing the number of devices on this machine
     let device_count = warp::get()
         .and(warp::path("device_count"))
@@ -213,10 +216,7 @@ async fn main() -> anyhow::Result<()> {
         .and(warp::path("health"))
         .and(warp::path::end())
         .and(campaigns_read)
-        .map({
-            let enabled = oneshot.enable;
-            move |c: CampaignsReadLock| health::check(nvml, &c, enabled).json_reply().no_cache()
-        });
+        .map(move |c: CampaignsReadLock| checker.check(&c).json_reply().no_cache());
 
     let v1_api = device_count.or(device).or(energy).or(ping).or(health);
     let v1_api = warp::path("v1").and(v1_api).with(warp::log("traffic"));
