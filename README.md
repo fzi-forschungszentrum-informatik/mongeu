@@ -94,6 +94,18 @@ containerized operations, it is neccessary to expose the GPUs to be monitored
 to the container. This can usually be achieved using the
 [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/).
 
+To build the container image locally, assigning the name `mongeu`, run the
+following command from this directory:
+
+    docker build -t mongeu .
+
+You may then run the service via the following command, exposing the service on
+port `5005` instead of `80` in a container named `mongeu`:
+
+    docker run --gpus=all --name mongeu -d -p 5005:80 mongeu
+
+You may also want to specify a restart policy (e.g. `--restart unless-stopped`).
+
 ## Acknowledgement
 
 <img src="./images/BMBF_sponsored.jpg" alt="BMBF logo" height="100" align="left">
