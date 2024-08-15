@@ -18,4 +18,9 @@ RUN ln -s /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1 /usr/lib/x86_64-linux-gnu/
 
 COPY --from=builder /bin/mongeu /bin/mongeu
 
+# Assuming mongeu listens on localhost:80 (e.g. when run with defaults), we can
+# use the health end-point for a simple container health-check
+RUN apt update && apt install -y curl && rm -rf /var/lib/apt/lists/*
+HEALTHCHECK CMD curl -sf localhost/v1/health || exit 1
+
 CMD ["/bin/mongeu"]
