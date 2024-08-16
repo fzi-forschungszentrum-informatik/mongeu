@@ -71,6 +71,23 @@ class Campaign:
     def __del__(self):
         requests.delete(self.url)
 
+class Measurement:
+    """A single measurement"""
+    def __init__(self, duration: int, devices: list):
+        self.duration = duration
+        self.devices = devices
+
+    def from_json(data):
+        """Create a measurement from a JSON representation"""
+        devices = list(map(lambda d: DeviceMeasurement(d['id'], d['energy']), data['devices']))
+        return Measurement(data['duration'], devices)
+
+class DeviceMeasurement:
+    """Measurement data for a specific device"""
+    def __init__(self, id: int, energy: int):
+        self.id = id
+        self.energy = energy
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Mongeu API client demo')
     parser.add_argument('url')
