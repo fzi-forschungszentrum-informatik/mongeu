@@ -107,6 +107,8 @@ if __name__ == '__main__':
     if args.action == 'ping':
         if not client.ping():
             sys.exit("Could not ping API")
+        else:
+            print("Ping successfull")
 
     elif args.action == 'health':
         print(client.health())
