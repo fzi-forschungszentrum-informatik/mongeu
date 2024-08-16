@@ -60,13 +60,13 @@ class Campaign:
     def __init__(self, url):
         self.url = url
 
-    def get(self) -> dict:
+    def get(self):
         """Get a current measurement for this campaign"""
         r = requests.get(self.url)
         if not r.ok:
             print(r, file=sys.stderr)
             return None
-        return r.json()
+        return Measurement.from_json(r.json())
 
     def __del__(self):
         requests.delete(self.url)
@@ -125,7 +125,7 @@ if __name__ == '__main__':
 
         for _ in range(0,args.count):
             time.sleep(args.interval/1000.0)
-            print(campaign.get())
+            print_measurement(campaign.get())
         del campaign
 
     else:
