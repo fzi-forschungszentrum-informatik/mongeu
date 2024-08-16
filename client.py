@@ -122,6 +122,8 @@ if __name__ == '__main__':
             campaign = client.new_campaign()
         else:
             campaign = client.new_campaign2()
+        if campaign is None:
+            sys.exit(f"Failed to create a new campaign using method {args.campaign_method}")
 
         for _ in range(0,args.count):
             time.sleep(args.interval/1000.0)
