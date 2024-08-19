@@ -33,7 +33,7 @@ class MongeuClient:
         if not r.ok:
             print(r, file=sys.stderr)
             return None
-        return r.json()
+        return Measurement.from_json(r.json())
 
     def new_campaign(self):
         """Create a new campaign"""
@@ -115,7 +115,7 @@ if __name__ == '__main__':
         measurement = client.oneshot(args.interval)
         if measurement is None:
             sys.exit("Could not issue oneshot measurement")
-        print(measurement)
+        print_measurement(measurement)
 
     elif args.action == 'campaign':
         if args.campaign_method == 1:
