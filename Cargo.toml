@@ -3,7 +3,7 @@ name = "mongeu"
 description = "MONitor for GPU Energy Usage"
 authors = ["Julian Ganz <ganz@fzi.de>"]
 license = "Apache-2.0"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
