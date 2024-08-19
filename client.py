@@ -6,7 +6,7 @@ import requests
 import sys
 import time
 
-class Client:
+class MongeuClient:
     """Mongeu API client"""
     def __init__(self, base_url: str):
         self.base_url = base_url
@@ -33,7 +33,7 @@ class Client:
         if not r.ok:
             print(r, file=sys.stderr)
             return None
-        return r.json()
+        return Measurement.from_json(r.json())
 
     def new_campaign(self):
         """Create a new campaign"""
@@ -60,18 +60,40 @@ class Campaign:
     def __init__(self, url):
         self.url = url
 
-    def get(self) -> dict:
+    def get(self):
         """Get a current measurement for this campaign"""
         r = requests.get(self.url)
         if not r.ok:
             print(r, file=sys.stderr)
             return None
-        return r.json()
+        return Measurement.from_json(r.json())
 
     def __del__(self):
         requests.delete(self.url)
 
+class Measurement:
+    """A single measurement"""
+    def __init__(self, duration: int, devices: list):
+        self.duration = duration
+        self.devices = devices
+
+    def from_json(data):
+        """Create a measurement from a JSON representation"""
+        devices = list(map(lambda d: DeviceMeasurement(d['id'], d['energy']), data['devices']))
+        return Measurement(data['duration'], devices)
+
+class DeviceMeasurement:
+    """Measurement data for a specific device"""
+    def __init__(self, id: int, energy: int):
+        self.id = id
+        self.energy = energy
+
 if __name__ == '__main__':
+    def print_measurement(measurement: Measurement):
+        line = f"{measurement.duration:>7}ms | "
+        line = line + ", ".join(map(lambda d: f"{d.id:>2}: {d.energy:>10}mJ", measurement.devices))
+        print(line)
+
     parser = argparse.ArgumentParser(description='Mongeu API client demo')
     parser.add_argument('url')
     parser.add_argument('action', choices=['ping', 'health', 'oneshot', 'campaign'])
@@ -80,11 +102,13 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--count', type=int, default=4)
     args = parser.parse_args()
 
-    client = Client(args.url)
+    client = MongeuClient(args.url)
 
     if args.action == 'ping':
         if not client.ping():
             sys.exit("Could not ping API")
+        else:
+            print("Ping successfull")
 
     elif args.action == 'health':
         print(client.health())
@@ -93,17 +117,19 @@ if __name__ == '__main__':
         measurement = client.oneshot(args.interval)
         if measurement is None:
             sys.exit("Could not issue oneshot measurement")
-        print(measurement)
+        print_measurement(measurement)
 
     elif args.action == 'campaign':
         if args.campaign_method == 1:
             campaign = client.new_campaign()
         else:
             campaign = client.new_campaign2()
+        if campaign is None:
+            sys.exit(f"Failed to create a new campaign using method {args.campaign_method}")
 
         for _ in range(0,args.count):
             time.sleep(args.interval/1000.0)
-            print(campaign.get())
+            print_measurement(campaign.get())
         del campaign
 
     else:
