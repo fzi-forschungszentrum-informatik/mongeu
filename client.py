@@ -89,6 +89,11 @@ class DeviceMeasurement:
         self.energy = energy
 
 if __name__ == '__main__':
+    def print_measurement(measurement: Measurement):
+        line = f"{measurement.duration:>7}ms | "
+        line = line + ", ".join(map(lambda d: f"{d.id:>2}: {d.energy:>10}mJ", measurement.devices))
+        print(line)
+
     parser = argparse.ArgumentParser(description='Mongeu API client demo')
     parser.add_argument('url')
     parser.add_argument('action', choices=['ping', 'health', 'oneshot', 'campaign'])
