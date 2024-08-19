@@ -6,7 +6,7 @@ import requests
 import sys
 import time
 
-class Client:
+class MongeuClient:
     """Mongeu API client"""
     def __init__(self, base_url: str):
         self.base_url = base_url
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--count', type=int, default=4)
     args = parser.parse_args()
 
-    client = Client(args.url)
+    client = MongeuClient(args.url)
 
     if args.action == 'ping':
         if not client.ping():
